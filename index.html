@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Coffee Roasting Log — Auto Render (A4 Printable)</title>
 
-  <!-- Chart.js CDN (benar) -->
-  https://cdn.jsdelivr.net/npm/chart.js</script>
+  <!-- ✅ Chart.js benar & spesifik versi (v4) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.t.umd.min.js</script>
 
   <style>
     :root{
@@ -49,7 +49,7 @@
 
     /* Grafik */
     .chart-card{padding:12px;}
-    .chart-wrap{position:relative;height:300px; /* 🔽 lebih kecil agar tidak terlalu besar di layar */ }
+    .chart-wrap{position:relative;height:300px;} /* lebih kecil agar tidak kebesaran di layar */
     canvas{display:block;}
 
     /* Status peringatan */
@@ -67,10 +67,10 @@
       .subtitle{margin-bottom:5mm;}
       .grid{grid-template-columns:repeat(2,1fr);gap:6mm;}
       .chart-wrap{height:auto;}
-      /* Ukuran kanvas untuk A4 (pas di lebar halaman dengan margin) */
+      /* Ukuran kanvas untuk A4 (pas di lebar konten dengan margin) */
       #roastChart{
         width:18cm !important;  /* ~lebar konten A4 - margin */
-        height:9cm !important;  /* proporsi enak dibaca di cetak */
+        height:9cm !important;  /* proporsi nyaman untuk cetak */
       }
     }
   </style>
@@ -289,12 +289,12 @@
         roastChart.data.datasets = datasets;
         roastChart.update();
       }else{
-        roastChart=new Chart(ctx,{ data:{ datasets }, options: baseOptions });
+        // ✅ set type root agar aman di Chart.js v4
+        roastChart=new Chart(ctx,{ type:'line', data:{ datasets }, options: baseOptions });
       }
     }
 
     function renderChart(tempData, tpTemp, fc, drop, dev, messages){
-      // Simpan dev untuk tooltip
       window.__DEV_TIME__ = (isFinite(dev)?dev:null);
 
       const lineData=tempData.map(d=>({x:d.x,y:d.y}));
@@ -363,7 +363,7 @@
       // Render chart (selalu)
       renderChart(tempData, (isFinite(tpTemp)?tpTemp:null), (isFinite(fc)?fc:null), (isFinite(drop)?drop:null), (isFinite(dev)?dev:null), messages);
 
-      if(tempData.length<1) messages.push('Belum ada titik suhu diinput. Isi suhu per menit agar kurva terlihat.');
+      if(tempData.length<1) messages.push('Belum ada titik suhu diinput. Isi minimal 2 menit agar kurva terlihat.');
       showStatus(messages);
     }
 
@@ -375,7 +375,6 @@
       const {tanggal,jam}=formatTanggalJam();
       document.getElementById('tanggal').value=tanggal;
       document.getElementById('jam').value=jam;
-      // Update jam tiap detik (opsional)
       setInterval(()=>{ document.getElementById('jam').value=formatTanggalJam().jam; },1000);
 
       initTempInputs();
@@ -392,7 +391,7 @@
       });
       document.getElementById('printBtn').addEventListener('click', ()=>{ window.print(); });
 
-      // Pastikan chart merespons ukuran cetak
+      // Sesuaikan saat masuk/keluar mode cetak
       window.addEventListener('beforeprint', ()=>{ if(roastChart) roastChart.resize(); });
       window.addEventListener('afterprint',  ()=>{ if(roastChart) roastChart.resize(); });
 
