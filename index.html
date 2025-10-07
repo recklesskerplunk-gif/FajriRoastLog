@@ -44,7 +44,7 @@
     <label>First Crack Minute: <input type="number" id="firstCrack" min="0" max="20"></label>
     <label>Drop Time Minute: <input type="number" id="dropTime" min="0" max="20"></label>
 
-    <h3>Input Suhu per Menit (80–2500C)</h3>
+    <h3>Input Suhu per Menit (80C250C)</h3>
     <div class="temperature-inputs" id="tempInputs"></div>
     <button type="button" onclick="generateChart()">End Of Roast</button>
     <button type="button" onclick="downloadChart()">Simpan Gambar</button>
@@ -89,7 +89,7 @@
         ctx.lineTo(950, y);
         ctx.stroke();
         ctx.fillStyle = "black";
-        ctx.fillText(`${t}0C`, 10, y + 4);
+        ctx.fillText(`${t}C`, 10, y + 4);
       }
 
       const temps = [];
@@ -122,7 +122,10 @@
           const x = 50 + minute * 45;
           const y = 550 - (temps[minute] - 80) * 2;
           ctx.fillStyle = color;
-          ctx.fillRect(x - 5, y - 5, 10, 10);
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.fillStyle = "black";
           ctx.fillText(label, x + 10, y);
         }
       }
@@ -130,10 +133,6 @@
       drawMarker(turningPoint, "red", "Turning Point");
       drawMarker(firstCrack, "yellow", "First Crack");
       drawMarker(dropTime, "blue", "Drop Time");
-      if (!isNaN(firstCrack) && !isNaN(dropTime)) {
-        const devTime = Math.floor((firstCrack + dropTime) / 2);
-        drawMarker(devTime, "green", "Development Time");
-      }
     }
 
     function downloadChart() {
