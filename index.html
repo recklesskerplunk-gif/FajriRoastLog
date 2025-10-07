@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Drop Decimal)</title>
+  <title>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Drop Final Temp)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -63,7 +63,7 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime)</h1>
+  <h1>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Drop Final Temp)</h1>
 
   <form id="roastForm">
     <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
@@ -80,6 +80,10 @@
     </label>
     <label>Drop Time (menit, boleh desimal):
       <input type="number" id="dropTime" min="1" max="20" step="0.1" placeholder="mis. 13.5 = 13m30s">
+    </label>
+    <!-- Baru: Suhu Akhir Drop (opsional) -->
+    <label>Suhu Akhir Drop (opsional):
+      <input type="number" id="dropFinalTemp" min="80" max="250" step="1" placeholder="mis. 205">
     </label>
 
     <div class="button-group">
@@ -226,9 +230,10 @@
       }
 
       const turningPointTemp = parseFloat(document.getElementById("turningPointTemp").value);
-      const firstCrackTemp  = parseFloat(document.getElementById("firstCrackTemp").value);
-      const secondCrackTemp = parseFloat(document.getElementById("secondCrackTemp").value);
-      const dropTimeInput   = parseFloat(document.getElementById("dropTime").value);
+      const firstCrackTemp   = parseFloat(document.getElementById("firstCrackTemp").value);
+      const secondCrackTemp  = parseFloat(document.getElementById("secondCrackTemp").value);
+      const dropTimeInput    = parseFloat(document.getElementById("dropTime").value);
+      const dropFinalTemp    = parseFloat(document.getElementById("dropFinalTemp").value); // NEW
 
       // Menit terakhir yang memiliki data (kurva berhenti di sini)
       let lastMinute = -1;
@@ -297,7 +302,6 @@
         ctx.fillStyle = "black";
         ctx.fillText(label, x + 10, y);
       }
-      // NEW: marker menit pecahan, suhu diinterpolasi/ditahan
       function drawMarkerAtMinuteExact(minuteExact, color, label) {
         const t = getTempAtMinuteExact(temps, minuteExact);
         if (t == null) return;
@@ -324,10 +328,22 @@
         drawMarkerExact(fcMinuteExact, firstCrackTemp, "orange", "First Crack");
       if (secondCrack >= 1) drawMarkerAtMinute(secondCrack, "green", "Second Crack");
 
-      // Drop time (boleh desimal) -> marker harus muncul
+      // --- Drop Time & Suhu Akhir Drop ---
       const dropTime = Number.isFinite(dropTimeInput) ? dropTimeInput : lastMinute;
+
       if (Number.isFinite(dropTime)) {
-        drawMarkerAtMinuteExact(dropTime, "blue", "Drop Time");
+        // Jika suhu akhir drop diisi valid, gunakan itu untuk posisi Y (override interpolasi)
+        if (Number.isFinite(dropFinalTemp) && dropFinalTemp >= 80 && dropFinalTemp <= 250) {
+          const label = `Drop Time (${formatMinToMinSec(dropTime)}, ${Math.round(dropFinalTemp)}°C)`;
+          drawMarkerExact(dropTime, dropFinalTemp, "blue", label);
+        } else {
+          // fallback: pakai suhu dari kurva (interpolasi/hold-last)
+          const t = getTempAtMinuteExact(temps, dropTime);
+          if (t != null) {
+            const label = `Drop Time (${formatMinToMinSec(dropTime)}, ${Math.round(t)}°C)`;
+            drawMarkerExact(dropTime, t, "blue", label);
+          }
+        }
       }
 
       // --- Development Time (DT) ---
@@ -357,3 +373,4 @@
     }
   </script>
 </body>
+</html>
