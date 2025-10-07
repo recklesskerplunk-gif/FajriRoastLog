@@ -260,9 +260,6 @@ label, input, select, textarea {
     <section id="stopwatch" class="timer-card hidden" aria-live="polite" aria-atomic="true">
       <div id="timeDisplay" class="time" aria-label="Waktu berjalan">00:00:00.00</div>
       <div class="controls">
-        <button id="pauseBtn" class="btn-pause" aria-pressed="false" title="Jeda atau lanjutkan stopwatch">
-          ⏸️ Pause
-        </button>
       </div>
       <div class="hints">Tips: tekan <kbd>Space</kbd> untuk jeda/lanjut.</div>
     </section>
@@ -271,7 +268,6 @@ label, input, select, textarea {
   <script>
     // Elemen
     const startBtn = document.getElementById('startBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
     const stopwatch = document.getElementById('stopwatch');
     const timeDisplay = document.getElementById('timeDisplay');
 
@@ -309,7 +305,6 @@ label, input, select, textarea {
       rafId = requestAnimationFrame(update);
     }
 
-    function pauseOrResume() {
       if (running) {
         // PAUSE
         running = false;
@@ -317,21 +312,16 @@ label, input, select, textarea {
         const now = performance.now();
         elapsed += (now - startStamp);   // simpan akumulasi
         // Ubah tombol ke "Lanjutkan"
-        pauseBtn.textContent = '▶️ Lanjutkan';
-        pauseBtn.setAttribute('aria-pressed', 'true');
       } else {
         // RESUME
         running = true;
         startStamp = performance.now();
-        pauseBtn.textContent = '⏸️ Pause';
-        pauseBtn.setAttribute('aria-pressed', 'false');
         rafId = requestAnimationFrame(update);
       }
     }
 
     // Event handlers
     startBtn.addEventListener('click', start);
-    pauseBtn.addEventListener('click', pauseOrResume);
 
     // Akses cepat via keyboard: Space untuk jeda/lanjut jika stopwatch sudah tampil
     window.addEventListener('keydown', (e) => {
@@ -340,7 +330,6 @@ label, input, select, textarea {
       if (e.code === 'Space') {
         e.preventDefault();
         if (stopwatch && !stopwatch.classList.contains('hidden')) {
-          pauseOrResume();
         }
       }
     });
