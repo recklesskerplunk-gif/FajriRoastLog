@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Connected Drop + Info Box)</title>
+  <title>Fajri Roast Log V.1.1 (RoR + DevRatio)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -25,9 +25,7 @@
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
-    label {
-      font-size: 0.9em;
-    }
+    label { font-size: 0.9em; }
     input, select, button {
       width: 100%;
       padding: 8px;
@@ -63,7 +61,7 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Connected Drop + Info Box)</h1>
+  <h1>Fajri Roast Log V.1.1 (RoR + DevRatio)</h1>
 
   <form id="roastForm">
     <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
@@ -81,7 +79,7 @@
     <label>Drop Time (menit, boleh desimal):
       <input type="number" id="dropTime" min="1" max="20" step="0.1" placeholder="mis. 13.5 = 13m30s">
     </label>
-    <label>Suhu Akhir Drop :
+    <label>Suhu Akhir Drop (opsional):
       <input type="number" id="dropFinalTemp" min="80" max="250" step="1" placeholder="mis. 205">
     </label>
 
@@ -94,7 +92,7 @@
   <canvas id="roastChart" width="1000" height="600"></canvas>
 
   <script>
-    // Buat input menit 1..20
+    // ====== Input fields 1..20 minutes ======
     const tempContainer = document.getElementById("tempInputs");
     for (let i = 1; i <= 20; i++) {
       const input = document.createElement("input");
@@ -107,34 +105,30 @@
       tempContainer.appendChild(input);
     }
 
-    // Cari menit (integer) dengan suhu terdekat ke targetTemp
+    // ====== Helpers ======
     function findClosestMinute(temps, targetTemp) {
       if (!Number.isFinite(targetTemp)) return -1;
-      let closestMinute = -1;
-      let minDiff = Infinity;
+      let closestMinute = -1, minDiff = Infinity;
       for (let i = 1; i <= temps.length; i++) {
         const t = temps[i - 1];
         if (t != null) {
           const diff = Math.abs(t - targetTemp);
           if (diff < minDiff) {
             minDiff = diff;
-            closestMinute = i; // menit (1..20)
+            closestMinute = i;
           }
         }
       }
       return closestMinute;
     }
 
-    // Cari menit pecahan (desimal) saat kurva melintasi targetTemp (interpolasi linear)
     function findCrossingMinute(temps, targetTemp, lastMinute) {
       if (!Number.isFinite(targetTemp)) return null;
       const upper = Math.max(2, lastMinute);
       for (let i = 1; i < upper; i++) {
-        const t1 = temps[i - 1];
-        const t2 = temps[i];
+        const t1 = temps[i - 1], t2 = temps[i];
         if (t1 == null || t2 == null) continue;
-        const minT = Math.min(t1, t2);
-        const maxT = Math.max(t1, t2);
+        const minT = Math.min(t1, t2), maxT = Math.max(t1, t2);
         if (targetTemp >= minT && targetTemp <= maxT && t2 !== t1) {
           const ratio = (targetTemp - t1) / (t2 - t1); // 0..1
           return i + ratio; // menit pecahan antara i dan i+1
@@ -143,8 +137,6 @@
       return null;
     }
 
-    // Temperatur pada menit pecahan: interpolasi antara titik valid terdekat.
-    // Jika hanya sisi kiri yang ada (kurva berhenti), pakai suhu terakhir agar marker tetap tampil.
     function getTempAtMinuteExact(temps, minuteExact) {
       if (!Number.isFinite(minuteExact)) return null;
       if (minuteExact < 1 || minuteExact > 20) return null;
@@ -157,24 +149,23 @@
       const floorM = Math.floor(minuteExact);
       const ceilM  = Math.ceil(minuteExact);
 
-      // cari prev known <= minuteExact
+      // prev known <= minuteExact
       let prev = null;
       for (let m = floorM; m >= 1; m--) {
         if (temps[m - 1] != null) { prev = m; break; }
       }
-      // cari next known >= minuteExact
+      // next known >= minuteExact
       let next = null;
       for (let m = ceilM; m <= 20; m++) {
         if (temps[m - 1] != null) { next = m; break; }
       }
 
       if (prev != null && next != null && prev !== next) {
-        const tPrev = temps[prev - 1];
-        const tNext = temps[next - 1];
+        const tPrev = temps[prev - 1], tNext = temps[next - 1];
         const ratio = (minuteExact - prev) / (next - prev);
         return tPrev + (tNext - tPrev) * ratio;
       } else if (prev != null) {
-        // hold-last-value jika tidak ada titik setelahnya
+        // hold-last-value bila tidak ada titik setelahnya
         return temps[prev - 1];
       } else if (next != null) {
         return temps[next - 1];
@@ -182,7 +173,6 @@
       return null;
     }
 
-    // Format menit desimal menjadi "Xm Ys"
     function formatMinToMinSec(minVal) {
       const totalSec = Math.max(0, Math.round(minVal * 60));
       const m = Math.floor(totalSec / 60);
@@ -190,28 +180,19 @@
       return `${m}m ${s}s`;
     }
 
-    // Kotak info pojok kiri atas
     function drawInfoBoxTopLeft(ctx, x, y, lines) {
       ctx.save();
       ctx.font = "12px Arial";
-      // Hitung lebar terpanjang
       let maxW = 0;
-      for (const line of lines) {
-        maxW = Math.max(maxW, ctx.measureText(line).width);
-      }
-      const padding = 8;
-      const lineH = 16;
+      for (const line of lines) maxW = Math.max(maxW, ctx.measureText(line).width);
+      const padding = 8, lineH = 16;
       const boxW = Math.ceil(maxW) + padding * 2;
       const boxH = lines.length * lineH + padding * 2;
-
-      // Background dan border
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.fillRect(x, y, boxW, boxH);
       ctx.strokeStyle = "#aaaaaa";
       ctx.lineWidth = 1;
       ctx.strokeRect(x, y, boxW, boxH);
-
-      // Teks
       ctx.fillStyle = "#111";
       lines.forEach((line, i) => {
         ctx.fillText(line, x + padding, y + padding + (i + 1) * lineH - 4);
@@ -219,12 +200,99 @@
       ctx.restore();
     }
 
+    // ====== NEW: RoR helpers ======
+    function computeRoR(temps, lastMinute) {
+      // Hasil: array objek { minuteExact: i-0.5, ror }
+      const points = [];
+      for (let i = 2; i <= lastMinute; i++) {
+        const tPrev = temps[i - 2], tCurr = temps[i - 1];
+        if (tPrev == null || tCurr == null) {
+          points.push(null); // placeholder untuk menandai gap
+        } else {
+          const ror = (tCurr - tPrev); // °C per menit (karena interval 1 menit)
+          points.push({ minuteExact: i - 0.5, ror });
+        }
+      }
+      return points; // indeks 0 mewakili antara menit 1-2 (posisi 1.5)
+    }
+
+    function getRoRRange(points) {
+      let minV = Infinity, maxV = -Infinity, count = 0;
+      for (const p of points) {
+        if (p && Number.isFinite(p.ror)) {
+          minV = Math.min(minV, p.ror);
+          maxV = Math.max(maxV, p.ror);
+          count++;
+        }
+      }
+      if (count === 0) return null;
+      if (minV === maxV) { // hindari range 0
+        minV -= 1;
+        maxV += 1;
+      }
+      // padding 10%
+      const pad = 0.1 * (maxV - minV);
+      return { min: minV - pad, max: maxV + pad };
+    }
+
+    function mapTempToY(temp) {
+      // Temp axis: 80..250°C -> 550..210 px (step 2 px/°C)
+      return 550 - (temp - 80) * 2;
+    }
+    function mapMinuteToX(minuteExact) {
+      return 50 + minuteExact * 45;
+    }
+    function mapRoRToY(ror, rmin, rmax) {
+      const top = 50, bottom = 550;
+      const ratio = (ror - rmin) / (rmax - rmin);
+      return bottom - ratio * (bottom - top);
+    }
+
+    function drawRightAxisForRoR(ctx, rmin, rmax) {
+      const rightX = 950;
+      ctx.save();
+      ctx.strokeStyle = "#bbb";
+      ctx.lineWidth = 1;
+      // Right axis line
+      ctx.beginPath();
+      ctx.moveTo(rightX, 50);
+      ctx.lineTo(rightX, 550);
+      ctx.stroke();
+
+      // Ticks & labels (5 garis)
+      ctx.font = "12px Arial";
+      ctx.fillStyle = "#333";
+      const steps = 5;
+      for (let i = 0; i <= steps; i++) {
+        const v = rmin + (i / steps) * (rmax - rmin);
+        const y = mapRoRToY(v, rmin, rmax);
+        // tick kecil
+        ctx.beginPath();
+        ctx.moveTo(rightX, y);
+        ctx.lineTo(rightX + 6, y);
+        ctx.strokeStyle = "#888";
+        ctx.stroke();
+        // label
+        ctx.fillText(`${v.toFixed(1)}`, rightX + 8, y + 4);
+      }
+      // Title
+      ctx.save();
+      ctx.translate(rightX + 40, 300);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = "#6d28d9"; // ungu
+      ctx.font = "bold 12px Arial";
+      ctx.fillText("RoR (°C/menit)", 0, 0);
+      ctx.restore();
+      ctx.restore();
+    }
+
+    // ====== Main draw ======
     function generateChart() {
       const canvas = document.getElementById("roastChart");
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw grid
+      // --- Grid suhu (kiri) ---
       ctx.strokeStyle = "#ddd";
       ctx.lineWidth = 1;
       ctx.font = "12px Arial";
@@ -232,17 +300,16 @@
 
       // Grid vertikal (menit)
       for (let i = 1; i <= 20; i++) {
-        const x = 50 + i * 45;
+        const x = mapMinuteToX(i);
         ctx.beginPath();
         ctx.moveTo(x, 50);
         ctx.lineTo(x, 550);
         ctx.stroke();
         ctx.fillText(`${i}m`, x - 10, 570);
       }
-
       // Grid horizontal (suhu)
       for (let t = 80; t <= 250; t += 10) {
-        const y = 550 - (t - 80) * 2;
+        const y = mapTempToY(t);
         ctx.beginPath();
         ctx.moveTo(50, y);
         ctx.lineTo(950, y);
@@ -250,7 +317,7 @@
         ctx.fillText(`${t}°C`, 10, y + 4);
       }
 
-      // Ambil data suhu per menit (indexing benar)
+      // --- Data ---
       const temps = new Array(20).fill(null);
       for (let i = 1; i <= 20; i++) {
         const val = parseFloat(document.getElementById(`minute${i}`).value);
@@ -263,44 +330,32 @@
       const dropTimeInput    = parseFloat(document.getElementById("dropTime").value);
       const dropFinalTemp    = parseFloat(document.getElementById("dropFinalTemp").value);
 
-      // Menit terakhir yang memiliki data (kurva berhenti di sini)
+      // Menit terakhir yang memiliki data
       let lastMinute = -1;
       for (let i = 20; i >= 1; i--) {
         if (temps[i - 1] != null) { lastMinute = i; break; }
       }
 
-      // Jika tidak ada data sama sekali
       if (lastMinute === -1) {
         ctx.font = "bold 14px Arial";
         ctx.fillText("Masukkan data suhu untuk menampilkan kurva.", 60, 30);
         return;
       }
 
-      // Gambar kurva suhu (putus jika ada gap kosong, berhenti di lastMinute)
-      ctx.strokeStyle = "black";
+      // --- Kurva suhu (putus jika gap, stop di lastMinute) ---
+      ctx.strokeStyle = "#000";
       ctx.lineWidth = 2;
       let hasPath = false;
-
       for (let i = 1; i <= lastMinute; i++) {
         const t = temps[i - 1];
         if (t == null) {
-          if (hasPath) {
-            ctx.stroke();
-            hasPath = false;
-          }
+          if (hasPath) { ctx.stroke(); hasPath = false; }
           continue;
         }
-
-        const x = 50 + i * 45;
-        const y = 550 - (t - 80) * 2;
-
-        if (!hasPath) {
-          ctx.beginPath();
-          ctx.moveTo(x, y);
-          hasPath = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
+        const x = mapMinuteToX(i);
+        const y = mapTempToY(t);
+        if (!hasPath) { ctx.beginPath(); ctx.moveTo(x, y); hasPath = true; }
+        else { ctx.lineTo(x, y); }
       }
       if (hasPath) ctx.stroke();
 
@@ -308,8 +363,8 @@
       function drawMarkerAtMinute(minute, color, label) {
         if (minute >= 1 && minute <= 20 && temps[minute - 1] != null) {
           const t = temps[minute - 1];
-          const x = 50 + minute * 45;
-          const y = 550 - (t - 80) * 2;
+          const x = mapMinuteToX(minute);
+          const y = mapTempToY(t);
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(x, y, 6, 0, 2 * Math.PI);
@@ -321,8 +376,8 @@
       function drawMarkerExact(minuteExact, tempVal, color, label) {
         if (!Number.isFinite(minuteExact) || !Number.isFinite(tempVal)) return;
         if (minuteExact < 1 || minuteExact > 20) return;
-        const x = 50 + minuteExact * 45;
-        const y = 550 - (tempVal - 80) * 2;
+        const x = mapMinuteToX(minuteExact);
+        const y = mapTempToY(tempVal);
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, 2 * Math.PI);
@@ -330,17 +385,10 @@
         ctx.fillStyle = "black";
         ctx.fillText(label, x + 10, y);
       }
-      function drawMarkerAtMinuteExact(minuteExact, color, label) {
-        const t = getTempAtMinuteExact(temps, minuteExact);
-        if (t == null) return;
-        drawMarkerExact(minuteExact, t, color, label);
-      }
 
-      // Hitung menit TP/FC/SC
+      // --- Hitung menit TP/FC/SC ---
       const turningPoint = findClosestMinute(temps, turningPointTemp);
       const secondCrack  = findClosestMinute(temps, secondCrackTemp);
-
-      // First Crack: cari waktu pecahan (interpolasi), fallback ke menit terdekat
       let fcMinuteExact = null;
       if (Number.isFinite(firstCrackTemp)) {
         fcMinuteExact = findCrossingMinute(temps, firstCrackTemp, lastMinute);
@@ -350,54 +398,48 @@
         }
       }
 
-      // Gambar marker TP/FC/SC
+      // --- Drop time & suhu di titik drop ---
+      const dropTime = Number.isFinite(dropTimeInput) ? dropTimeInput : lastMinute;
+      let dropTempUsed = null;
+      let dropTempIsApprox = false;
+      if (Number.isFinite(dropFinalTemp) && dropFinalTemp >= 80 && dropFinalTemp <= 250) {
+        dropTempUsed = dropFinalTemp;
+      } else {
+        dropTempUsed = getTempAtMinuteExact(temps, dropTime);
+        dropTempIsApprox = (dropTempUsed != null);
+      }
+
+      // --- Gambar marker TP/FC/SC ---
       if (turningPoint >= 1) drawMarkerAtMinute(turningPoint, "red",    "Turning Point");
       if (Number.isFinite(firstCrackTemp) && fcMinuteExact != null)
         drawMarkerExact(fcMinuteExact, firstCrackTemp, "orange", "First Crack");
       if (secondCrack >= 1) drawMarkerAtMinute(secondCrack, "green", "Second Crack");
 
-      // --- Drop time & Suhu Akhir Drop ---
-      const dropTime = Number.isFinite(dropTimeInput) ? dropTimeInput : lastMinute;
-
-      // Tentukan suhu yang dipakai di titik drop
-      let dropTempUsed = null;
-      let dropTempIsApprox = false;
-      if (Number.isFinite(dropFinalTemp) && dropFinalTemp >= 80 && dropFinalTemp <= 250) {
-        dropTempUsed = dropFinalTemp; // pakai input user
-      } else {
-        dropTempUsed = getTempAtMinuteExact(temps, dropTime); // estimasi
-        dropTempIsApprox = (dropTempUsed != null); // tandai sebagai estimasi jika berhasil dihitung
-      }
-
+      // --- Sambungkan kurva ke titik drop + marker drop ---
       if (Number.isFinite(dropTime) && dropTempUsed != null) {
-        // Cari titik jangkar terakhir <= dropTime yang punya data
+        // cari anchor terakhir <= dropTime
         let anchorMinute = null;
         const startSearch = Math.min(lastMinute, Math.floor(dropTime));
         for (let m = startSearch; m >= 1; m--) {
           if (temps[m - 1] != null) { anchorMinute = m; break; }
         }
-
-        // Sambungkan garis kurva dari anchor -> titik Drop
         if (anchorMinute != null) {
-          const x1 = 50 + anchorMinute * 45;
-          const y1 = 550 - (temps[anchorMinute - 1] - 80) * 2;
-          const x2 = 50 + dropTime * 45;
-          const y2 = 550 - (dropTempUsed - 80) * 2;
-
+          const x1 = mapMinuteToX(anchorMinute);
+          const y1 = mapTempToY(temps[anchorMinute - 1]);
+          const x2 = mapMinuteToX(dropTime);
+          const y2 = mapTempToY(dropTempUsed);
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
-          ctx.strokeStyle = "black";
+          ctx.strokeStyle = "#000";
           ctx.lineWidth = 2;
           ctx.stroke();
         }
-
-        // Marker Drop (di atas garis)
         const dropLabel = `Drop Time (${formatMinToMinSec(dropTime)}, ${Math.round(dropTempUsed)}°C)`;
         drawMarkerExact(dropTime, dropTempUsed, "blue", dropLabel);
       }
 
-      // --- Kotak keterangan pojok kiri atas (TP, FC, SC, Drop Time, Suhu Akhir Drop) ---
+      // --- Info box kiri atas: TP/FC/SC/Drop Time/Suhu Akhir Drop ---
       const tpLabel  = Number.isFinite(turningPointTemp) ? `${Math.round(turningPointTemp)}°C` : "—";
       const fcLabel  = Number.isFinite(firstCrackTemp)   ? `${Math.round(firstCrackTemp)}°C`   : "—";
       const scLabel  = Number.isFinite(secondCrackTemp)  ? `${Math.round(secondCrackTemp)}°C`  : "—";
@@ -414,21 +456,71 @@
         `Suhu Akhir Drop: ${dropTLabel}`,
       ]);
 
-      // --- Development Time (DT) di pojok kanan atas ---
+      // --- Development Time (DT) + Development Ratio (%) di kanan atas ---
       if (Number.isFinite(dropTime) && fcMinuteExact != null && dropTime > fcMinuteExact) {
         const devTimeMin = dropTime - fcMinuteExact;
-        const devLabel = `Development Time: ${formatMinToMinSec(devTimeMin)}`;
+        const devRatio = devTimeMin / dropTime * 100;
+        const lines = [
+          `Development Time: ${formatMinToMinSec(devTimeMin)}`,
+          `Development Ratio: ${devRatio.toFixed(1)}%`,
+        ];
 
+        // ukuran box kanan atas
         ctx.font = "bold 14px Arial";
-        const padding = 6;
-        const textW = ctx.measureText(devLabel).width;
-        const boxX = 950 - textW - padding*2; // sejajar tepi kanan grid
+        let maxW = 0; lines.forEach(l => maxW = Math.max(maxW, ctx.measureText(l).width));
+        const padding = 6, lineH = 18;
+        const boxW = Math.ceil(maxW) + padding * 2;
+        const boxH = lines.length * lineH + padding * 2;
+        const boxX = 950 - boxW; // sejajar tepi kanan grid
         const boxY = 20;
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.fillRect(boxX, boxY - 14, textW + padding*2, 22);
+
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+        ctx.strokeStyle = "#aaaaaa";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+
         ctx.fillStyle = "black";
-        ctx.fillText(devLabel, boxX + padding, boxY);
+        lines.forEach((l, i) => {
+          ctx.fillText(l, boxX + padding, boxY + padding + (i + 1) * lineH - 4);
+        });
       }
+
+      // ====== NEW: Rate of Rise (RoR) curve + right axis ======
+      const rorPoints = computeRoR(temps, lastMinute);
+      const rorRange = getRoRRange(rorPoints);
+      if (rorRange) {
+        // Right axis for RoR
+        drawRightAxisForRoR(ctx, rorRange.min, rorRange.max);
+
+        // Draw RoR curve (ungu)
+        ctx.strokeStyle = "#8b5cf6";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([]); // solid
+        let pathOpen = false;
+
+        for (let i = 0; i < rorPoints.length; i++) {
+          const p = rorPoints[i];
+          if (!p) {
+            if (pathOpen) { ctx.stroke(); pathOpen = false; }
+            continue;
+          }
+          const x = mapMinuteToX(p.minuteExact);
+          const y = mapRoRToY(p.ror, rorRange.min, rorRange.max);
+          if (!pathOpen) { ctx.beginPath(); ctx.moveTo(x, y); pathOpen = true; }
+          else { ctx.lineTo(x, y); }
+        }
+        if (pathOpen) ctx.stroke();
+
+        // Legend kecil
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "#8b5cf6";
+        ctx.fillRect(60, 580 - 16, 10, 10);
+        ctx.fillStyle = "#222";
+        ctx.fillText("RoR (°C/menit)", 76, 580 - 7);
+      }
+
+      // (Opsional) Legend untuk kurva suhu sudah jelas dari konteks/warna marker.
     }
 
     function downloadChart() {
