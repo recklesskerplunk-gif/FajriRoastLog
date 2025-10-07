@@ -90,7 +90,7 @@
 
   <script>
     const tempContainer = document.getElementById("tempInputs");
-    for (let i = 0; i <= 20; i++) {
+    for (let i = 1; i <= 20; i++) {
       const input = document.createElement("input");
       input.type = "number";
       input.id = `minute${i}`;
@@ -104,7 +104,7 @@
     function findClosestMinute(temps, targetTemp) {
       let closestMinute = -1;
       let minDiff = Infinity;
-      for (let i = 0; i < temps.length; i++) {
+      for (let i = 1; i < temps.length; i++) {
         if (temps[i] !== null) {
           const diff = Math.abs(temps[i] - targetTemp);
           if (diff < minDiff) {
@@ -124,7 +124,7 @@
       // Draw grid
       ctx.strokeStyle = "#ddd";
       ctx.lineWidth = 1;
-      for (let i = 0; i <= 20; i++) {
+      for (let i = 1; i <= 20; i++) {
         const x = 50 + i * 45;
         ctx.beginPath();
         ctx.moveTo(x, 50);
@@ -144,7 +144,7 @@
       }
 
       const temps = [];
-      for (let i = 0; i <= 20; i++) {
+      for (let i = 1; i <= 20; i++) {
         const val = parseInt(document.getElementById(`minute${i}`).value);
         temps.push(isNaN(val) ? null : val);
       }
@@ -160,7 +160,7 @@
       ctx.beginPath();
       ctx.strokeStyle = "black";
       ctx.lineWidth = 2;
-      for (let i = 0; i <= 20; i++) {
+      for (let i = 1; i <= 20; i++) {
         if (temps[i] !== null) {
           const x = 50 + i * 45;
           const y = 550 - (temps[i] - 80) * 2;
