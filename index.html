@@ -40,7 +40,7 @@
   <h1>Interactive Coffee Roasting Log</h1>
 
   <form id="roastForm">
-    <h3>Input Suhu per Menit (80C250C)</h3>
+    <h3>Input Suhu per Menit (80°C–250°C)</h3>
     <div class="temperature-inputs" id="tempInputs"></div>
 
     <label>Suhu Turning Point: <input type="number" id="turningPointTemp" min="80" max="250"></label>
@@ -64,6 +64,21 @@
       input.max = 250;
       input.step = 1;
       tempContainer.appendChild(input);
+    }
+
+    function findClosestMinute(temps, targetTemp) {
+      let closestMinute = -1;
+      let minDiff = Infinity;
+      for (let i = 0; i < temps.length; i++) {
+        if (temps[i] !== null) {
+          const diff = Math.abs(temps[i] - targetTemp);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestMinute = i;
+          }
+        }
+      }
+      return closestMinute;
     }
 
     function generateChart() {
@@ -90,7 +105,7 @@
         ctx.lineTo(950, y);
         ctx.stroke();
         ctx.fillStyle = "black";
-        ctx.fillText(`${t}C`, 10, y + 4);
+        ctx.fillText(`${t}°C`, 10, y + 4);
       }
 
       const temps = [];
@@ -103,9 +118,9 @@
       const firstCrackTemp = parseInt(document.getElementById("firstCrackTemp").value);
       const dropTime = parseInt(document.getElementById("dropTime").value);
 
-      // Find minute for turning point and first crack based on temperature
-      const turningPoint = temps.findIndex(t => t === turningPointTemp);
-      const firstCrack = temps.findIndex(t => t === firstCrackTemp);
+      // Find closest minute for turning point and first crack
+      const turningPoint = findClosestMinute(temps, turningPointTemp);
+      const firstCrack = findClosestMinute(temps, firstCrackTemp);
 
       // Draw temperature curve
       ctx.beginPath();
