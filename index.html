@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (RoR + DevRatio)</title>
+  <title>Fajri Roast Log V.1.1 (DevRatio, tanpa RoR)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -61,7 +61,7 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1 (RoR + DevRatio)</h1>
+  <h1>Fajri Roast Log V.1.1 (DevRatio, tanpa RoR)</h1>
 
   <form id="roastForm">
     <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
@@ -122,6 +122,7 @@
       return closestMinute;
     }
 
+    // Cari menit pecahan (desimal) saat kurva melintasi targetTemp (interpolasi linear)
     function findCrossingMinute(temps, targetTemp, lastMinute) {
       if (!Number.isFinite(targetTemp)) return null;
       const upper = Math.max(2, lastMinute);
@@ -137,6 +138,8 @@
       return null;
     }
 
+    // Temperatur pada menit pecahan: interpolasi antara titik valid terdekat.
+    // Jika hanya sisi kiri yang ada (kurva berhenti), pakai suhu terakhir agar marker tetap tampil.
     function getTempAtMinuteExact(temps, minuteExact) {
       if (!Number.isFinite(minuteExact)) return null;
       if (minuteExact < 1 || minuteExact > 20) return null;
@@ -200,90 +203,12 @@
       ctx.restore();
     }
 
-    // ====== NEW: RoR helpers ======
-    function computeRoR(temps, lastMinute) {
-      // Hasil: array objek { minuteExact: i-0.5, ror }
-      const points = [];
-      for (let i = 2; i <= lastMinute; i++) {
-        const tPrev = temps[i - 2], tCurr = temps[i - 1];
-        if (tPrev == null || tCurr == null) {
-          points.push(null); // placeholder untuk menandai gap
-        } else {
-          const ror = (tCurr - tPrev); // °C per menit (karena interval 1 menit)
-          points.push({ minuteExact: i - 0.5, ror });
-        }
-      }
-      return points; // indeks 0 mewakili antara menit 1-2 (posisi 1.5)
-    }
-
-    function getRoRRange(points) {
-      let minV = Infinity, maxV = -Infinity, count = 0;
-      for (const p of points) {
-        if (p && Number.isFinite(p.ror)) {
-          minV = Math.min(minV, p.ror);
-          maxV = Math.max(maxV, p.ror);
-          count++;
-        }
-      }
-      if (count === 0) return null;
-      if (minV === maxV) { // hindari range 0
-        minV -= 1;
-        maxV += 1;
-      }
-      // padding 10%
-      const pad = 0.1 * (maxV - minV);
-      return { min: minV - pad, max: maxV + pad };
-    }
-
+    // Mapping posisi
     function mapTempToY(temp) {
-      // Temp axis: 80..250°C -> 550..210 px (step 2 px/°C)
       return 550 - (temp - 80) * 2;
     }
     function mapMinuteToX(minuteExact) {
       return 50 + minuteExact * 45;
-    }
-    function mapRoRToY(ror, rmin, rmax) {
-      const top = 50, bottom = 550;
-      const ratio = (ror - rmin) / (rmax - rmin);
-      return bottom - ratio * (bottom - top);
-    }
-
-    function drawRightAxisForRoR(ctx, rmin, rmax) {
-      const rightX = 950;
-      ctx.save();
-      ctx.strokeStyle = "#bbb";
-      ctx.lineWidth = 1;
-      // Right axis line
-      ctx.beginPath();
-      ctx.moveTo(rightX, 50);
-      ctx.lineTo(rightX, 550);
-      ctx.stroke();
-
-      // Ticks & labels (5 garis)
-      ctx.font = "12px Arial";
-      ctx.fillStyle = "#333";
-      const steps = 5;
-      for (let i = 0; i <= steps; i++) {
-        const v = rmin + (i / steps) * (rmax - rmin);
-        const y = mapRoRToY(v, rmin, rmax);
-        // tick kecil
-        ctx.beginPath();
-        ctx.moveTo(rightX, y);
-        ctx.lineTo(rightX + 6, y);
-        ctx.strokeStyle = "#888";
-        ctx.stroke();
-        // label
-        ctx.fillText(`${v.toFixed(1)}`, rightX + 8, y + 4);
-      }
-      // Title
-      ctx.save();
-      ctx.translate(rightX + 40, 300);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = "#6d28d9"; // ungu
-      ctx.font = "bold 12px Arial";
-      ctx.fillText("RoR (°C/menit)", 0, 0);
-      ctx.restore();
-      ctx.restore();
     }
 
     // ====== Main draw ======
@@ -292,7 +217,7 @@
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // --- Grid suhu (kiri) ---
+      // --- Grid ---
       ctx.strokeStyle = "#ddd";
       ctx.lineWidth = 1;
       ctx.font = "12px Arial";
@@ -465,7 +390,6 @@
           `Development Ratio: ${devRatio.toFixed(1)}%`,
         ];
 
-        // ukuran box kanan atas
         ctx.font = "bold 14px Arial";
         let maxW = 0; lines.forEach(l => maxW = Math.max(maxW, ctx.measureText(l).width));
         const padding = 6, lineH = 18;
@@ -485,42 +409,6 @@
           ctx.fillText(l, boxX + padding, boxY + padding + (i + 1) * lineH - 4);
         });
       }
-
-      // ====== NEW: Rate of Rise (RoR) curve + right axis ======
-      const rorPoints = computeRoR(temps, lastMinute);
-      const rorRange = getRoRRange(rorPoints);
-      if (rorRange) {
-        // Right axis for RoR
-        drawRightAxisForRoR(ctx, rorRange.min, rorRange.max);
-
-        // Draw RoR curve (ungu)
-        ctx.strokeStyle = "#8b5cf6";
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([]); // solid
-        let pathOpen = false;
-
-        for (let i = 0; i < rorPoints.length; i++) {
-          const p = rorPoints[i];
-          if (!p) {
-            if (pathOpen) { ctx.stroke(); pathOpen = false; }
-            continue;
-          }
-          const x = mapMinuteToX(p.minuteExact);
-          const y = mapRoRToY(p.ror, rorRange.min, rorRange.max);
-          if (!pathOpen) { ctx.beginPath(); ctx.moveTo(x, y); pathOpen = true; }
-          else { ctx.lineTo(x, y); }
-        }
-        if (pathOpen) ctx.stroke();
-
-        // Legend kecil
-        ctx.font = "12px Arial";
-        ctx.fillStyle = "#8b5cf6";
-        ctx.fillRect(60, 580 - 16, 10, 10);
-        ctx.fillStyle = "#222";
-        ctx.fillText("RoR (°C/menit)", 76, 580 - 7);
-      }
-
-      // (Opsional) Legend untuk kurva suhu sudah jelas dari konteks/warna marker.
     }
 
     function downloadChart() {
