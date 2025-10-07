@@ -82,6 +82,33 @@
 </label>
 <label>Moisture Content (%):
         <input id="moistureContent" max="30" min="0" placeholder="mis. 11.5" step="0.1" type="number"/>
+<div>
+<button onclick="startRoasting()">Start Roasting</button>
+<button onclick="resetStopwatch()">Reset</button>
+<div id="stopwatch">00:00</div>
+</div>
+<script>
+        let stopwatchInterval;
+        let seconds = 0;
+
+        function startRoasting() {
+            clearInterval(stopwatchInterval);
+            stopwatchInterval = setInterval(() => {
+                seconds++;
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                document.getElementById("stopwatch").textContent =
+                    String(minutes).padStart(2, '0') + ":" + String(secs).padStart(2, '0');
+            }, 1000);
+        }
+
+        function resetStopwatch() {
+            clearInterval(stopwatchInterval);
+            seconds = 0;
+            document.getElementById("stopwatch").textContent = "00:00";
+        }
+    </script>
+
 </label>
 </div>
 <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
@@ -479,34 +506,5 @@
       link.click();
     }
   </script>
-
-<!-- Tombol dan Stopwatch -->
-<button onclick="startRoasting()">Start Roasting</button>
-<button onclick="resetStopwatch()">Reset</button>
-<div id="stopwatch">00:00</div>
-<!-- Input Suhu per Menit -->
-<label for="suhu">Input Suhu per Menit (80°C–250°C):</label>
-<input id="suhu" max="250" min="80" name="suhu" type="number"/>
-<script>
-  let stopwatchInterval;
-  let seconds = 0;
-
-  function startRoasting() {
-    clearInterval(stopwatchInterval);
-    stopwatchInterval = setInterval(() => {
-      seconds++;
-      const minutes = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      document.getElementById("stopwatch").textContent =
-        `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }, 1000);
-  }
-
-  function resetStopwatch() {
-    clearInterval(stopwatchInterval);
-    seconds = 0;
-    document.getElementById("stopwatch").textContent = "00:00";
-  }
-</script>
 </body>
 </html>
