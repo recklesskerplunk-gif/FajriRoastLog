@@ -3,52 +3,87 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Fajri Roast Log v.1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Coffee Roasting Log</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
+      margin: 10px;
+      padding: 0;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
     label {
-      display: block;
-      margin-top: 10px;
+      font-size: 0.9em;
     }
-    input, select {
-      width: 300px;
-      padding: 5px;
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
     }
     .temperature-inputs {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      margin-top: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
     }
     canvas {
-      margin-top: 30px;
+      margin-top: 20px;
+      width: 100%;
       max-width: 100%;
       height: auto;
       border: 1px solid #ccc;
       background-color: #fff;
     }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    @media (min-width: 600px) {
+      .button-group {
+        flex-direction: row;
+        justify-content: space-between;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log v.1</h1>
+  <h1>Interactive Coffee Roasting Log</h1>
 
   <form id="roastForm">
-    <h3>Input Suhu per Menit (80°C–250°C)</h3>
+    <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
     <div class="temperature-inputs" id="tempInputs"></div>
 
-    <label>Suhu Turning Point: <input type="number" id="turningPointTemp" min="80" max="250"></label>
-    <label>Suhu First Crack: <input type="number" id="firstCrackTemp" min="80" max="250"></label>
-    <label>Drop Time Minute: <input type="number" id="dropTime" min="0" max="20"></label>
+    <label>Suhu Turning Point:
+      <input type="number" id="turningPointTemp" min="80" max="250">
+    </label>
+    <label>Suhu First Crack:
+      <input type="number" id="firstCrackTemp" min="80" max="250">
+    </label>
+    <label>Drop Time Minute:
+      <input type="number" id="dropTime" min="0" max="20">
+    </label>
 
-    <button type="button" onclick="generateChart()">End Of Roast</button>
-    <button type="button" onclick="downloadChart()">Simpan Gambar</button>
+    <div class="button-group">
+      <button type="button" onclick="generateChart()">End Of Roast</button>
+      <button type="button" onclick="downloadChart()">Simpan Gambar</button>
+    </div>
   </form>
 
   <canvas id="roastChart" width="1000" height="600"></canvas>
@@ -59,7 +94,7 @@
       const input = document.createElement("input");
       input.type = "number";
       input.id = `minute${i}`;
-      input.placeholder = `Menit ${i}`;
+      input.placeholder = `${i}m`;
       input.min = 80;
       input.max = 250;
       input.step = 1;
@@ -118,7 +153,6 @@
       const firstCrackTemp = parseInt(document.getElementById("firstCrackTemp").value);
       const dropTime = parseInt(document.getElementById("dropTime").value);
 
-      // Find closest minute for turning point and first crack
       const turningPoint = findClosestMinute(temps, turningPointTemp);
       const firstCrack = findClosestMinute(temps, firstCrackTemp);
 
@@ -136,7 +170,6 @@
       }
       ctx.stroke();
 
-      // Draw markers
       function drawMarker(minute, color, label) {
         if (minute >= 0 && minute <= 20 && temps[minute] !== null) {
           const x = 50 + minute * 45;
