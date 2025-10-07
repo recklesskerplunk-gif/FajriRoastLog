@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (DevRatio + Charge Temp + Meta)</title>
+  <title>Fajri Roast Log V.1.1 (Meta Top-Center)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -66,10 +66,10 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1 (DevRatio + Charge Temp + Meta)</h1>
+  <h1>Fajri Roast Log V.1.1</h1>
 
   <form id="roastForm">
-    <!-- BARU: Meta sebelum input suhu per menit -->
+    <!-- META (tetap di form, ditampilkan di atas-tengah grafik) -->
     <div class="meta-inputs">
       <label>Roast Master:
         <input type="text" id="roastMaster" placeholder="Nama operator (mis. Fajari)">
@@ -205,7 +205,7 @@
       return `${m}m ${s}s`;
     }
 
-    function drawInfoBoxTopLeft(ctx, x, y, lines) {
+    function drawInfoBox(ctx, x, y, lines, align = "left") {
       ctx.save();
       ctx.font = "12px Arial";
       let maxW = 0;
@@ -213,14 +213,23 @@
       const padding = 8, lineH = 16;
       const boxW = Math.ceil(maxW) + padding * 2;
       const boxH = lines.length * lineH + padding * 2;
+
+      // Hitung posisi X berdasarkan align (left/center/right)
+      let boxX = x;
+      if (align === "center") boxX = x - boxW / 2;
+      else if (align === "right") boxX = x - boxW;
+
+      // Gambar box
       ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.fillRect(x, y, boxW, boxH);
+      ctx.fillRect(boxX, y, boxW, boxH);
       ctx.strokeStyle = "#aaaaaa";
       ctx.lineWidth = 1;
-      ctx.strokeRect(x, y, boxW, boxH);
+      ctx.strokeRect(boxX, y, boxW, boxH);
+
+      // Teks
       ctx.fillStyle = "#111";
       lines.forEach((line, i) => {
-        ctx.fillText(line, x + padding, y + padding + (i + 1) * lineH - 4);
+        ctx.fillText(line, boxX + padding, y + padding + (i + 1) * lineH - 4);
       });
       ctx.restore();
     }
@@ -239,6 +248,8 @@
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      const PLOT_LEFT = 50, PLOT_RIGHT = 950, PLOT_TOP = 50, PLOT_BOTTOM = 550;
+
       // --- Grid ---
       ctx.strokeStyle = "#ddd";
       ctx.lineWidth = 1;
@@ -249,8 +260,8 @@
       for (let i = 1; i <= 20; i++) {
         const x = mapMinuteToX(i);
         ctx.beginPath();
-        ctx.moveTo(x, 50);
-        ctx.lineTo(x, 550);
+        ctx.moveTo(x, PLOT_TOP);
+        ctx.lineTo(x, PLOT_BOTTOM);
         ctx.stroke();
         ctx.fillText(`${i}m`, x - 10, 570);
       }
@@ -258,8 +269,8 @@
       for (let t = 80; t <= 250; t += 10) {
         const y = mapTempToY(t);
         ctx.beginPath();
-        ctx.moveTo(50, y);
-        ctx.lineTo(950, y);
+        ctx.moveTo(PLOT_LEFT, y);
+        ctx.lineTo(PLOT_RIGHT, y);
         ctx.stroke();
         ctx.fillText(`${t}°C`, 10, y + 4);
       }
@@ -296,6 +307,33 @@
         return;
       }
 
+      // --- Marker helpers ---
+      function drawMarkerAtMinute(minute, color, label) {
+        if (minute >= 1 && minute <= 20 && temps[minute - 1] != null) {
+          const t = temps[minute - 1];
+          const x = mapMinuteToX(minute);
+          const y = mapTempToY(t);
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.fillStyle = "black";
+          ctx.fillText(label, x + 10, y);
+        }
+      }
+      function drawMarkerExact(minuteExact, tempVal, color, label) {
+        if (!Number.isFinite(minuteExact) || !Number.isFinite(tempVal)) return;
+        if (minuteExact < 0 || minuteExact > 20) return; // izinkan 0 (Charge)
+        const x = mapMinuteToX(minuteExact);
+        const y = mapTempToY(tempVal);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = "black";
+        ctx.fillText(label, x + 10, y);
+      }
+
       // --- Garis dari Suhu Awal (menit 0) ke menit 1 (jika ada) + marker Charge ---
       if (Number.isFinite(initialTemp) && temps[0] != null) {
         const x0 = mapMinuteToX(0), y0 = mapTempToY(initialTemp);
@@ -327,33 +365,6 @@
         else { ctx.lineTo(x, y); }
       }
       if (hasPath) ctx.stroke();
-
-      // --- Marker helpers ---
-      function drawMarkerAtMinute(minute, color, label) {
-        if (minute >= 1 && minute <= 20 && temps[minute - 1] != null) {
-          const t = temps[minute - 1];
-          const x = mapMinuteToX(minute);
-          const y = mapTempToY(t);
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(x, y, 6, 0, 2 * Math.PI);
-          ctx.fill();
-          ctx.fillStyle = "black";
-          ctx.fillText(label, x + 10, y);
-        }
-      }
-      function drawMarkerExact(minuteExact, tempVal, color, label) {
-        if (!Number.isFinite(minuteExact) || !Number.isFinite(tempVal)) return;
-        if (minuteExact < 0 || minuteExact > 20) return; // izinkan 0 (Charge)
-        const x = mapMinuteToX(minuteExact);
-        const y = mapTempToY(tempVal);
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(x, y, 6, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillStyle = "black";
-        ctx.fillText(label, x + 10, y);
-      }
 
       // --- Hitung menit TP/FC/SC ---
       const turningPoint = findClosestMinute(temps, turningPointTemp);
@@ -408,12 +419,17 @@
         drawMarkerExact(dropTime, dropTempUsed, "blue", dropLabel);
       }
 
-      // --- Info box kiri atas: tambahkan meta baru + data roasting utama ---
-      const roastMasterLabel    = roastMaster || "—";
-      const roasterMachineLabel = roasterMachine || "—";
-      const coffeeNameLabel     = coffeeName || "—";
-      const moistureLabel       = Number.isFinite(moistureContent) ? `${moistureContent.toFixed(1)}%` : "—";
+      // --- META di ATAS-TENGAH (dalam grafik) ---
+      const metaLines = [
+        `Roast Master: ${roastMaster || "—"}`,
+        `Roaster Machine: ${roasterMachine || "—"}`,
+        `Coffee: ${coffeeName || "—"}`,
+        `Moisture: ${Number.isFinite(moistureContent) ? moistureContent.toFixed(1) + "%" : "—"}`,
+      ];
+      const centerX = (PLOT_LEFT + PLOT_RIGHT) / 2; // tengah area plot
+      drawInfoBox(ctx, centerX, 12, metaLines, "center"); // y=12 agar di atas grid
 
+      // --- Info box kiri atas: event roasting (tanpa meta) ---
       const chargeLabel = Number.isFinite(initialTemp)      ? `${Math.round(initialTemp)}°C`        : "—";
       const tpLabel     = Number.isFinite(turningPointTemp) ? `${Math.round(turningPointTemp)}°C`   : "—";
       const fcLabel     = Number.isFinite(firstCrackTemp)   ? `${Math.round(firstCrackTemp)}°C`     : "—";
@@ -423,12 +439,7 @@
       if (dropTempUsed != null) {
         dropTLabel = `${dropTempIsApprox ? "≈ " : ""}${Math.round(dropTempUsed)}°C`;
       }
-
-      drawInfoBoxTopLeft(ctx, 60, 20, [
-        `Roast Master: ${roastMasterLabel}`,
-        `Roaster Machine: ${roasterMachineLabel}`,
-        `Coffee: ${coffeeNameLabel}`,
-        `Moisture: ${moistureLabel}`,
+      drawInfoBox(ctx, 60, 20, [
         `Suhu Awal (Charge): ${chargeLabel}`,
         `Turning Point: ${tpLabel}`,
         `First Crack: ${fcLabel}`,
@@ -451,7 +462,7 @@
         const padding = 6, lineH = 18;
         const boxW = Math.ceil(maxW) + padding * 2;
         const boxH = lines.length * lineH + padding * 2;
-        const boxX = 950 - boxW; // sejajar tepi kanan grid
+        const boxX = PLOT_RIGHT - boxW; // sejajar tepi kanan grid
         const boxY = 20;
 
         ctx.fillStyle = "rgba(255,255,255,0.85)";
