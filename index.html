@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Drop Final Temp)</title>
+  <title>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Drop Final Temp + Connect)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -63,7 +63,7 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Drop Final Temp)</h1>
+  <h1>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Connected Drop)</h1>
 
   <form id="roastForm">
     <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
@@ -81,7 +81,6 @@
     <label>Drop Time (menit, boleh desimal):
       <input type="number" id="dropTime" min="1" max="20" step="0.1" placeholder="mis. 13.5 = 13m30s">
     </label>
-    <!-- Baru: Suhu Akhir Drop (opsional) -->
     <label>Suhu Akhir Drop (opsional):
       <input type="number" id="dropFinalTemp" min="80" max="250" step="1" placeholder="mis. 205">
     </label>
@@ -233,7 +232,7 @@
       const firstCrackTemp   = parseFloat(document.getElementById("firstCrackTemp").value);
       const secondCrackTemp  = parseFloat(document.getElementById("secondCrackTemp").value);
       const dropTimeInput    = parseFloat(document.getElementById("dropTime").value);
-      const dropFinalTemp    = parseFloat(document.getElementById("dropFinalTemp").value); // NEW
+      const dropFinalTemp    = parseFloat(document.getElementById("dropFinalTemp").value);
 
       // Menit terakhir yang memiliki data (kurva berhenti di sini)
       let lastMinute = -1;
@@ -328,22 +327,43 @@
         drawMarkerExact(fcMinuteExact, firstCrackTemp, "orange", "First Crack");
       if (secondCrack >= 1) drawMarkerAtMinute(secondCrack, "green", "Second Crack");
 
-      // --- Drop Time & Suhu Akhir Drop ---
+      // --- Drop time & Suhu Akhir Drop ---
       const dropTime = Number.isFinite(dropTimeInput) ? dropTimeInput : lastMinute;
 
-      if (Number.isFinite(dropTime)) {
-        // Jika suhu akhir drop diisi valid, gunakan itu untuk posisi Y (override interpolasi)
-        if (Number.isFinite(dropFinalTemp) && dropFinalTemp >= 80 && dropFinalTemp <= 250) {
-          const label = `Drop Time (${formatMinToMinSec(dropTime)}, ${Math.round(dropFinalTemp)}°C)`;
-          drawMarkerExact(dropTime, dropFinalTemp, "blue", label);
-        } else {
-          // fallback: pakai suhu dari kurva (interpolasi/hold-last)
-          const t = getTempAtMinuteExact(temps, dropTime);
-          if (t != null) {
-            const label = `Drop Time (${formatMinToMinSec(dropTime)}, ${Math.round(t)}°C)`;
-            drawMarkerExact(dropTime, t, "blue", label);
-          }
+      // Tentukan suhu yang dipakai di titik drop
+      let dropTempUsed = null;
+      if (Number.isFinite(dropFinalTemp) && dropFinalTemp >= 80 && dropFinalTemp <= 250) {
+        dropTempUsed = dropFinalTemp;
+      } else {
+        dropTempUsed = getTempAtMinuteExact(temps, dropTime);
+      }
+
+      if (Number.isFinite(dropTime) && dropTempUsed != null) {
+        // Cari titik jangkar terakhir <= dropTime yang punya data
+        let anchorMinute = null;
+        const startSearch = Math.min(lastMinute, Math.floor(dropTime));
+        for (let m = startSearch; m >= 1; m--) {
+          if (temps[m - 1] != null) { anchorMinute = m; break; }
         }
+
+        // Sambungkan garis kurva dari anchor -> titik Drop
+        if (anchorMinute != null) {
+          const x1 = 50 + anchorMinute * 45;
+          const y1 = 550 - (temps[anchorMinute - 1] - 80) * 2;
+          const x2 = 50 + dropTime * 45;
+          const y2 = 550 - (dropTempUsed - 80) * 2;
+
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = "black";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        // Marker Drop (di atas garis)
+        const dropLabel = `Drop Time (${formatMinToMinSec(dropTime)}, ${Math.round(dropTempUsed)}°C)`;
+        drawMarkerExact(dropTime, dropTempUsed, "blue", dropLabel);
       }
 
       // --- Development Time (DT) ---
