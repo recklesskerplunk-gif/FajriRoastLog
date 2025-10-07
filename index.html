@@ -28,6 +28,7 @@
       max-width: 100%;
       height: auto;
       border: 1px solid #ccc;
+      background-color: #fff;
     }
     button {
       margin-top: 20px;
@@ -43,7 +44,7 @@
     <label>First Crack Minute: <input type="number" id="firstCrack" min="0" max="20"></label>
     <label>Drop Time Minute: <input type="number" id="dropTime" min="0" max="20"></label>
 
-    <h3>Input Suhu per Menit (80–250°C)</h3>
+    <h3>Input Suhu per Menit (80–2500C)</h3>
     <div class="temperature-inputs" id="tempInputs"></div>
     <button type="button" onclick="generateChart()">End Of Roast</button>
     <button type="button" onclick="downloadChart()">Simpan Gambar</button>
@@ -69,6 +70,28 @@
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Draw grid
+      ctx.strokeStyle = "#ddd";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 20; i++) {
+        const x = 50 + i * 45;
+        ctx.beginPath();
+        ctx.moveTo(x, 50);
+        ctx.lineTo(x, 550);
+        ctx.stroke();
+        ctx.fillStyle = "black";
+        ctx.fillText(`${i}m`, x - 10, 570);
+      }
+      for (let t = 80; t <= 250; t += 10) {
+        const y = 550 - (t - 80) * 2;
+        ctx.beginPath();
+        ctx.moveTo(50, y);
+        ctx.lineTo(950, y);
+        ctx.stroke();
+        ctx.fillStyle = "black";
+        ctx.fillText(`${t}0C`, 10, y + 4);
+      }
+
       const temps = [];
       for (let i = 0; i <= 20; i++) {
         const val = parseInt(document.getElementById(`minute${i}`).value);
@@ -78,14 +101,6 @@
       const turningPoint = parseInt(document.getElementById("turningPoint").value);
       const firstCrack = parseInt(document.getElementById("firstCrack").value);
       const dropTime = parseInt(document.getElementById("dropTime").value);
-
-      // Draw axes
-      ctx.beginPath();
-      ctx.moveTo(50, 550);
-      ctx.lineTo(950, 550);
-      ctx.moveTo(50, 550);
-      ctx.lineTo(50, 50);
-      ctx.stroke();
 
       // Draw temperature curve
       ctx.beginPath();
