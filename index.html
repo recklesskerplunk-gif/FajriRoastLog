@@ -40,11 +40,11 @@
   <h1>Interactive Coffee Roasting Log</h1>
 
   <form id="roastForm">
-    <label>Turning Point Minute: <input type="number" id="turningPoint" min="0" max="20"></label>
-    <label>First Crack Minute: <input type="number" id="firstCrack" min="0" max="20"></label>
+    <label>Suhu Turning Point: <input type="number" id="turningPointTemp" min="80" max="250"></label>
+    <label>Suhu First Crack: <input type="number" id="firstCrackTemp" min="80" max="250"></label>
     <label>Drop Time Minute: <input type="number" id="dropTime" min="0" max="20"></label>
 
-    <h3>Input Suhu per Menit (80C250C)</h3>
+    <h3>Input Suhu per Menit (80C02500C)</h3>
     <div class="temperature-inputs" id="tempInputs"></div>
     <button type="button" onclick="generateChart()">End Of Roast</button>
     <button type="button" onclick="downloadChart()">Simpan Gambar</button>
@@ -89,7 +89,7 @@
         ctx.lineTo(950, y);
         ctx.stroke();
         ctx.fillStyle = "black";
-        ctx.fillText(`${t}C`, 10, y + 4);
+        ctx.fillText(`${t}0C`, 10, y + 4);
       }
 
       const temps = [];
@@ -98,9 +98,13 @@
         temps.push(isNaN(val) ? null : val);
       }
 
-      const turningPoint = parseInt(document.getElementById("turningPoint").value);
-      const firstCrack = parseInt(document.getElementById("firstCrack").value);
+      const turningPointTemp = parseInt(document.getElementById("turningPointTemp").value);
+      const firstCrackTemp = parseInt(document.getElementById("firstCrackTemp").value);
       const dropTime = parseInt(document.getElementById("dropTime").value);
+
+      // Find minute for turning point and first crack based on temperature
+      const turningPoint = temps.findIndex(t => t === turningPointTemp);
+      const firstCrack = temps.findIndex(t => t === firstCrackTemp);
 
       // Draw temperature curve
       ctx.beginPath();
@@ -118,7 +122,7 @@
 
       // Draw markers
       function drawMarker(minute, color, label) {
-        if (!isNaN(minute) && temps[minute] !== null) {
+        if (minute >= 0 && minute <= 20 && temps[minute] !== null) {
           const x = 50 + minute * 45;
           const y = 550 - (temps[minute] - 80) * 2;
           ctx.fillStyle = color;
