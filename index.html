@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Fajri Roast Log V.1.1 (Meta Top-Center)</title>
   <style>
+
+label, input, select, textarea {
+    color: navy;
+}
+
     body {
       font-family: Arial, sans-serif;
       margin: 10px;
@@ -168,8 +173,15 @@
       opacity: .85;
     }
 
-    
-    
+    .btn-pause {
+      background: linear-gradient(180deg, #60a5fa, #3b82f6);
+      color: #071a33;
+    }
+    .btn-pause[aria-pressed="true"] {
+      /* mode Lanjutkan */
+      background: linear-gradient(180deg, #fb923c, #f97316);
+      color: #2d1505;
+    }
 
     /* KOTAK STOPWATCH */
     .timer-card {
@@ -247,8 +259,12 @@
 
     <section id="stopwatch" class="timer-card hidden" aria-live="polite" aria-atomic="true">
       <div id="timeDisplay" class="time" aria-label="Waktu berjalan">00:00:00.00</div>
-      
-      
+      <div class="controls">
+        <button id="pauseBtn" class="btn-pause" aria-pressed="false" title="Jeda atau lanjutkan stopwatch">
+          ⏸️ Pause
+        </button>
+      </div>
+      <div class="hints">Tips: tekan <kbd>Space</kbd> untuk jeda/lanjut.</div>
     </section>
   </main>
 
@@ -319,10 +335,19 @@
 
     // Event handlers
     startBtn.addEventListener('click', start);
-    
+    pauseBtn.addEventListener('click', pauseOrResume);
 
     // Akses cepat via keyboard: Space untuk jeda/lanjut jika stopwatch sudah tampil
-    
+    window.addEventListener('keydown', (e) => {
+      // Abaikan jika sedang mengetik di input
+      if (['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (stopwatch && !stopwatch.classList.contains('hidden')) {
+          pauseOrResume();
+        }
+      }
+    });
 
     // Opsional: cegah jam "melompat" jika tab di-background terlalu lama.
     // (Dengan performance.now + rAF, drift tetap minim dan halus untuk UI.)
