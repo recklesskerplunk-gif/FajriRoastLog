@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (Save as PDF)</title>
+  <title>Fajri Roast Log V.1.1 (Meta Top-Center)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -50,7 +50,7 @@
       max-width: 100%;
       height: auto;
       border: 1px solid #ccc;
-      background-color: #fff; /* CSS white (visual), tetap kita isi putih via JS juga */
+      background-color: #fff;
     }
     .button-group {
       display: flex;
@@ -69,7 +69,7 @@
   <h1>Fajri Roast Log V.1.1</h1>
 
   <form id="roastForm">
-    <!-- META (ditampilkan di atas-tengah grafik) -->
+    <!-- META (tetap di form, ditampilkan di atas-tengah grafik) -->
     <div class="meta-inputs">
       <label>Roast Master:
         <input type="text" id="roastMaster" placeholder="Nama operator (mis. Fajari)">
@@ -111,9 +111,7 @@
 
     <div class="button-group">
       <button type="button" onclick="generateChart()">End Of Roast</button>
-      <!-- DIHAPUS: tombol Simpan Gambar -->
-      <!-- DIGANTI: tombol Save as PDF -->
-      <button type="button" onclick="saveAsPDF()">Save as PDF</button>
+      <button type="button" onclick="downloadChart()">Simpan Gambar</button>
     </div>
   </form>
 
@@ -147,6 +145,7 @@
       return closestMinute;
     }
 
+    // Cari menit pecahan saat kurva melintasi targetTemp (interpolasi linear)
     function findCrossingMinute(temps, targetTemp, lastMinute) {
       if (!Number.isFinite(targetTemp)) return null;
       const upper = Math.max(2, lastMinute);
@@ -162,6 +161,7 @@
       return null;
     }
 
+    // Suhu pada menit pecahan: interpolasi atau hold-last
     function getTempAtMinuteExact(temps, minuteExact) {
       if (!Number.isFinite(minuteExact)) return null;
       if (minuteExact < 0 || minuteExact > 20) return null; // NOTE: izinkan 0 (Charge)
@@ -246,14 +246,7 @@
     function generateChart() {
       const canvas = document.getElementById("roastChart");
       const ctx = canvas.getContext("2d");
-
-      // Bersihkan & isi background putih (agar hasil ekspor tak transparan/hitam)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.restore();
 
       const PLOT_LEFT = 50, PLOT_RIGHT = 950, PLOT_TOP = 50, PLOT_BOTTOM = 550;
 
@@ -433,10 +426,10 @@
         `Coffee: ${coffeeName || "—"}`,
         `Moisture: ${Number.isFinite(moistureContent) ? moistureContent.toFixed(1) + "%" : "—"}`,
       ];
-      const centerX = (PLOT_LEFT + PLOT_RIGHT) / 2;
-      drawInfoBox(ctx, centerX, 12, metaLines, "center");
+      const centerX = (PLOT_LEFT + PLOT_RIGHT) / 2; // tengah area plot
+      drawInfoBox(ctx, centerX, 12, metaLines, "center"); // y=12 agar di atas grid
 
-      // --- Info box kiri atas: event roasting ---
+      // --- Info box kiri atas: event roasting (tanpa meta) ---
       const chargeLabel = Number.isFinite(initialTemp)      ? `${Math.round(initialTemp)}°C`        : "—";
       const tpLabel     = Number.isFinite(turningPointTemp) ? `${Math.round(turningPointTemp)}°C`   : "—";
       const fcLabel     = Number.isFinite(firstCrackTemp)   ? `${Math.round(firstCrackTemp)}°C`     : "—";
@@ -469,7 +462,7 @@
         const padding = 6, lineH = 18;
         const boxW = Math.ceil(maxW) + padding * 2;
         const boxH = lines.length * lineH + padding * 2;
-        const boxX = PLOT_RIGHT - boxW;
+        const boxX = PLOT_RIGHT - boxW; // sejajar tepi kanan grid
         const boxY = 20;
 
         ctx.fillStyle = "rgba(255,255,255,0.85)";
@@ -485,47 +478,12 @@
       }
     }
 
-    // ====== Save as PDF (gunakan print dialog A4 landscape, background putih) ======
-    function saveAsPDF() {
+    function downloadChart() {
       const canvas = document.getElementById("roastChart");
-
-      // Buat kanvas offscreen & isi putih
-      const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = canvas.width;
-      exportCanvas.height = canvas.height;
-      const ectx = exportCanvas.getContext('2d');
-      ectx.fillStyle = '#ffffff';
-      ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-      ectx.drawImage(canvas, 0, 0);
-
-      const dataURL = exportCanvas.toDataURL('image/png');
-
-      // Buka jendela cetak (A4 landscape), lalu user pilih "Save as PDF"
-      const w = window.open('', '_blank');
-      if (!w) { alert('Popup diblokir. Mohon izinkan pop-up untuk menyimpan PDF.'); return; }
-      w.document.write(`<!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Roast Curve PDF</title>
-            <style>
-              @page { size: A4 landscape; margin: 12mm; }
-              html, body { background: #ffffff; }
-              body { margin: 0; }
-              img { width: 100%; height: auto; display: block; }
-              @media print { body { margin: 0; } }
-            </style>
-          </head>
-          <body>
-            ${dataURL}
-            <script>
-              window.onload = function() {
-                setTimeout(function(){ window.print(); }, 300);
-              };
-            </script>
-          </body>
-        </html>`);
-      w.document.close();
+      const link = document.createElement("a");
+      link.download = "coffee_roast_curve.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
     }
   </script>
 </body>
