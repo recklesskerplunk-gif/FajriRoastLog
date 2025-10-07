@@ -260,10 +260,7 @@ label, input, select, textarea {
     <section id="stopwatch" class="timer-card hidden" aria-live="polite" aria-atomic="true">
       <div id="timeDisplay" class="time" aria-label="Waktu berjalan">00:00:00.00</div>
       <div class="controls">
-        <button id="pauseBtn" class="btn-pause" aria-pressed="false" title="Jeda atau lanjutkan stopwatch">
-          ⏸️ Pause
-        </button>
-      </div>
+        
       <div class="hints">Tips: tekan <kbd>Space</kbd> untuk jeda/lanjut.</div>
     </section>
   </main>
@@ -271,8 +268,7 @@ label, input, select, textarea {
   <script>
     // Elemen
     const startBtn = document.getElementById('startBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const stopwatch = document.getElementById('stopwatch');
+        const stopwatch = document.getElementById('stopwatch');
     const timeDisplay = document.getElementById('timeDisplay');
 
     // State waktu (dalam ms)
@@ -335,8 +331,7 @@ label, input, select, textarea {
 
     // Event handlers
     startBtn.addEventListener('click', start);
-    pauseBtn.addEventListener('click', pauseOrResume);
-
+    
     // Akses cepat via keyboard: Space untuk jeda/lanjut jika stopwatch sudah tampil
     window.addEventListener('keydown', (e) => {
       // Abaikan jika sedang mengetik di input
