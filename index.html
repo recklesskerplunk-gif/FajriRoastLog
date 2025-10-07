@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Coffee Roasting Log</title>
-  https://cdn.jsdelivr.net/npm/chart.js
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -23,13 +22,14 @@
       gap: 10px;
       margin-top: 20px;
     }
-    canvas {
+    img {
       margin-top: 30px;
       max-width: 100%;
       height: auto;
+      border: 1px solid #ccc;
     }
     @media print {
-      canvas {
+      img {
         page-break-before: always;
       }
     }
@@ -49,22 +49,18 @@
         <option>0</option><option>0.5</option><option>1</option><option>1.5</option><option>2</option>
       </select>
     </label>
-    <label>Suhu Turning Point (Kotak Merah): <input type="number" name="turningPoint"></label>
+    <label>Suhu Turning Point: <input type="number" name="turningPoint"></label>
     <label>Suhu First Crack: <input type="number" name="firstCrackTemp"></label>
-    <label>First Crack Time (Kotak Kuning): <input type="number" name="firstCrackTime"></label>
-    <label>Drop Time (Kotak Biru): <input type="number" name="dropTime"></label>
-    <label>Development Time (Kotak Hijau): <input type="number" name="developmentTime" readonly></label>
+    <label>First Crack Time: <input type="number" name="firstCrackTime"></label>
+    <label>Drop Time: <input type="number" name="dropTime"></label>
+    <label>Development Time: <input type="number" name="developmentTime" readonly></label>
 
     <h3>Input Suhu per Menit (80–250°C)</h3>
     <div class="temperature-inputs" id="tempInputs"></div>
-
-    <button type="button" onclick="generateChart()">End Of Roast</button>
   </form>
 
-  <canvas id="roastChart" width="800" height="600"></canvas>
-
-  <script>
-    // Set tanggal dan jam otomatis
+  <h2>Grafik Kurva Suhu</h2>
+  <img src="![alt_image](https://jp-prod.asyncgw.teams.microsoft.com/v1/objects/0-ea-d1-f2ebf96dcf9cb880f755fdea0318382c/views/original/coffee_roast_curve.png)" alt="coffee_roast_curve jam otomatis
     const now = new Date();
     document.getElementById("tanggal").value = now.toLocaleDateString();
     document.getElementById("jam").value = now.toLocaleTimeString();
@@ -80,102 +76,6 @@
       input.max = 250;
       input.step = 10;
       tempContainer.appendChild(input);
-    }
-
-    function generateChart() {
-      const form = document.forms["roastForm"];
-      const temps = [];
-      const labels = [];
-
-      for (let i = 0; i <= 20; i++) {
-        const val = parseInt(form[`minute${i}`].value);
-        if (!isNaN(val)) {
-          temps.push(val);
-          labels.push(i);
-        }
-      }
-
-      const turningPoint = parseInt(form["turningPoint"].value);
-      const firstCrackTime = parseInt(form["firstCrackTime"].value);
-      const dropTime = parseInt(form["dropTime"].value);
-      const developmentTime = dropTime - firstCrackTime;
-      form["developmentTime"].value = developmentTime;
-
-      const ctx = document.getElementById("roastChart").getContext("2d");
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Suhu (°C)',
-            data: temps,
-            borderColor: 'black',
-            borderWidth: 2,
-            fill: false,
-            pointRadius: 0
-          },
-          {
-            label: 'Turning Point',
-            data: [{x: labels.indexOf(turningPoint), y: turningPoint}],
-            backgroundColor: 'red',
-            pointStyle: 'rect',
-            pointRadius: 6,
-            showLine: false
-          },
-          {
-            label: 'First Crack',
-            data: [{x: firstCrackTime, y: temps[firstCrackTime]}],
-            backgroundColor: 'yellow',
-            pointStyle: 'rect',
-            pointRadius: 6,
-            showLine: false
-          },
-          {
-            label: 'Development Time',
-            data: [{x: dropTime, y: temps[dropTime]}],
-            backgroundColor: 'green',
-            pointStyle: 'rect',
-            pointRadius: 6,
-            showLine: false
-          },
-          {
-            label: 'Drop Time',
-            data: [{x: dropTime, y: temps[dropTime]}],
-            backgroundColor: 'blue',
-            pointStyle: 'rect',
-            pointRadius: 6,
-            showLine: false
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: 'top'
-            },
-            title: {
-              display: true,
-              text: 'Coffee Roast Curve'
-            }
-          },
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'Menit'
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: 'Suhu (°C)'
-              },
-              min: 80,
-              max: 250
-            }
-          }
-        }
-      });
     }
   </script>
 </body>
