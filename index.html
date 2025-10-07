@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime)</title>
+  <title>Fajri Roast Log V.1.1 (Fix + Second Crack + DevTime + Drop Decimal)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -125,18 +125,56 @@
     // Cari menit pecahan (desimal) saat kurva melintasi targetTemp (interpolasi linear)
     function findCrossingMinute(temps, targetTemp, lastMinute) {
       if (!Number.isFinite(targetTemp)) return null;
-      const upper = Math.max(2, lastMinute); // minimal dua titik
+      const upper = Math.max(2, lastMinute);
       for (let i = 1; i < upper; i++) {
         const t1 = temps[i - 1];
         const t2 = temps[i];
         if (t1 == null || t2 == null) continue;
-        // cek apakah target berada di antara t1 dan t2 (naik atau turun)
         const minT = Math.min(t1, t2);
         const maxT = Math.max(t1, t2);
         if (targetTemp >= minT && targetTemp <= maxT && t2 !== t1) {
           const ratio = (targetTemp - t1) / (t2 - t1); // 0..1
           return i + ratio; // menit pecahan antara i dan i+1
         }
+      }
+      return null;
+    }
+
+    // Temperatur pada menit pecahan: interpolasi antara titik valid terdekat.
+    // Jika hanya sisi kiri yang ada (kurva berhenti), pakai suhu terakhir agar marker tetap tampil.
+    function getTempAtMinuteExact(temps, minuteExact) {
+      if (!Number.isFinite(minuteExact)) return null;
+      if (minuteExact < 1 || minuteExact > 20) return null;
+
+      if (Number.isInteger(minuteExact)) {
+        const t = temps[minuteExact - 1];
+        return t != null ? t : null;
+      }
+
+      const floorM = Math.floor(minuteExact);
+      const ceilM  = Math.ceil(minuteExact);
+
+      // cari prev known <= minuteExact
+      let prev = null;
+      for (let m = floorM; m >= 1; m--) {
+        if (temps[m - 1] != null) { prev = m; break; }
+      }
+      // cari next known >= minuteExact
+      let next = null;
+      for (let m = ceilM; m <= 20; m++) {
+        if (temps[m - 1] != null) { next = m; break; }
+      }
+
+      if (prev != null && next != null && prev !== next) {
+        const tPrev = temps[prev - 1];
+        const tNext = temps[next - 1];
+        const ratio = (minuteExact - prev) / (next - prev);
+        return tPrev + (tNext - tPrev) * ratio;
+      } else if (prev != null) {
+        // hold-last-value jika tidak ada titik setelahnya
+        return temps[prev - 1];
+      } else if (next != null) {
+        return temps[next - 1];
       }
       return null;
     }
@@ -180,7 +218,7 @@
         ctx.fillText(`${t}°C`, 10, y + 4);
       }
 
-      // Ambil data suhu per menit dengan indexing benar
+      // Ambil data suhu per menit (indexing benar)
       const temps = new Array(20).fill(null);
       for (let i = 1; i <= 20; i++) {
         const val = parseFloat(document.getElementById(`minute${i}`).value);
@@ -198,9 +236,8 @@
         if (temps[i - 1] != null) { lastMinute = i; break; }
       }
 
-      // Jika tidak ada data sama sekali, selesai (hanya grid)
+      // Jika tidak ada data sama sekali
       if (lastMinute === -1) {
-        // Tuliskan info jika ingin
         ctx.font = "bold 14px Arial";
         ctx.fillText("Masukkan data suhu untuk menampilkan kurva.", 60, 30);
         return;
@@ -212,7 +249,7 @@
       let hasPath = false;
 
       for (let i = 1; i <= lastMinute; i++) {
-        const t = temps[i - 1]; // indexing benar
+        const t = temps[i - 1];
         if (t == null) {
           if (hasPath) {
             ctx.stroke();
@@ -248,7 +285,6 @@
           ctx.fillText(label, x + 10, y);
         }
       }
-      // Marker pada posisi pecahan menit & suhu tertentu (untuk FC exact)
       function drawMarkerExact(minuteExact, tempVal, color, label) {
         if (!Number.isFinite(minuteExact) || !Number.isFinite(tempVal)) return;
         if (minuteExact < 1 || minuteExact > 20) return;
@@ -261,12 +297,18 @@
         ctx.fillStyle = "black";
         ctx.fillText(label, x + 10, y);
       }
+      // NEW: marker menit pecahan, suhu diinterpolasi/ditahan
+      function drawMarkerAtMinuteExact(minuteExact, color, label) {
+        const t = getTempAtMinuteExact(temps, minuteExact);
+        if (t == null) return;
+        drawMarkerExact(minuteExact, t, color, label);
+      }
 
-      // Hitung menit untuk TP/FC/SC
+      // Hitung menit TP/FC/SC
       const turningPoint = findClosestMinute(temps, turningPointTemp);
       const secondCrack  = findClosestMinute(temps, secondCrackTemp);
 
-      // First Crack: coba cari waktu pecahan (interpolasi), fallback ke menit terdekat
+      // First Crack: cari waktu pecahan (interpolasi), fallback ke menit terdekat
       let fcMinuteExact = null;
       if (Number.isFinite(firstCrackTemp)) {
         fcMinuteExact = findCrossingMinute(temps, firstCrackTemp, lastMinute);
@@ -276,24 +318,25 @@
         }
       }
 
-      // Gambar marker
+      // Gambar marker TP/FC/SC
       if (turningPoint >= 1) drawMarkerAtMinute(turningPoint, "red",    "Turning Point");
       if (Number.isFinite(firstCrackTemp) && fcMinuteExact != null)
         drawMarkerExact(fcMinuteExact, firstCrackTemp, "orange", "First Crack");
       if (secondCrack >= 1) drawMarkerAtMinute(secondCrack, "green", "Second Crack");
 
+      // Drop time (boleh desimal) -> marker harus muncul
       const dropTime = Number.isFinite(dropTimeInput) ? dropTimeInput : lastMinute;
+      if (Number.isFinite(dropTime)) {
+        drawMarkerAtMinuteExact(dropTime, "blue", "Drop Time");
+      }
 
       // --- Development Time (DT) ---
-      // DT = dropTime - fcMinuteExact (dalam menit desimal), tampilkan m & s
+      // DT = dropTime - fcMinuteExact
       if (Number.isFinite(dropTime) && fcMinuteExact != null && dropTime > fcMinuteExact) {
         const devTimeMin = dropTime - fcMinuteExact;
         const devLabel = `Development Time: ${formatMinToMinSec(devTimeMin)}`;
 
-        // Tulis di atas grafik (kanan atas area judul)
         ctx.font = "bold 14px Arial";
-        ctx.fillStyle = "black";
-        // background tipis supaya terbaca
         const padding = 6;
         const textW = ctx.measureText(devLabel).width;
         const boxX = 950 - textW - padding*2; // sejajar tepi kanan grid
@@ -302,16 +345,6 @@
         ctx.fillRect(boxX, boxY - 14, textW + padding*2, 22);
         ctx.fillStyle = "black";
         ctx.fillText(devLabel, boxX + padding, boxY);
-      } else {
-        // Jika data belum cukup untuk hitung DT, bisa tampilkan info singkat (opsional)
-        // ctx.font = "bold 14px Arial";
-        // ctx.fillText("Development Time: -", 700, 30);
-      }
-
-      // Opsional: gambar marker Drop Time jika ada suhu di menit itu
-      const dropMinuteInt = Number.isFinite(dropTimeInput) ? Math.round(dropTimeInput) : lastMinute;
-      if (dropMinuteInt >= 1 && dropMinuteInt <= 20) {
-        drawMarkerAtMinute(dropMinuteInt, "blue", "Drop Time");
       }
     }
 
@@ -324,4 +357,3 @@
     }
   </script>
 </body>
-</html>
