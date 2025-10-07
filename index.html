@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (DevRatio + Charge Temp)</title>
+  <title>Fajri Roast Log V.1.1 (DevRatio + Charge Temp + Meta)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -34,6 +34,11 @@
       border-radius: 4px;
       box-sizing: border-box;
     }
+    .meta-inputs {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
     .temperature-inputs {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -61,13 +66,29 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1 (DevRatio + Charge Temp)</h1>
+  <h1>Fajri Roast Log V.1.1 (DevRatio + Charge Temp + Meta)</h1>
 
   <form id="roastForm">
+    <!-- BARU: Meta sebelum input suhu per menit -->
+    <div class="meta-inputs">
+      <label>Roast Master:
+        <input type="text" id="roastMaster" placeholder="Nama operator (mis. Fajari)">
+      </label>
+      <label>Roaster Machine:
+        <input type="text" id="roasterMachine" placeholder="Merek/Model mesin (mis. Huky 500)">
+      </label>
+      <label>Coffee:
+        <input type="text" id="coffeeName" placeholder="Origin/Varietas (mis. Gayo Natural)">
+      </label>
+      <label>Moisture Content (%):
+        <input type="number" id="moistureContent" min="0" max="30" step="0.1" placeholder="mis. 11.5">
+      </label>
+    </div>
+
     <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
     <div class="temperature-inputs" id="tempInputs"></div>
 
-    <!-- BARU: Suhu Awal (Charge) -->
+    <!-- Suhu Awal (Charge) -->
     <label>Suhu Awal (saat memasukkan biji ke drum):
       <input type="number" id="initialTemp" min="80" max="250" step="1" placeholder="mis. 200">
     </label>
@@ -118,10 +139,7 @@
         const t = temps[i - 1];
         if (t != null) {
           const diff = Math.abs(t - targetTemp);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestMinute = i;
-          }
+          if (diff < minDiff) { minDiff = diff; closestMinute = i; }
         }
       }
       return closestMinute;
@@ -136,7 +154,7 @@
         if (t1 == null || t2 == null) continue;
         const minT = Math.min(t1, t2), maxT = Math.max(t1, t2);
         if (targetTemp >= minT && targetTemp <= maxT && t2 !== t1) {
-          const ratio = (targetTemp - t1) / (t2 - t1); // 0..1
+          const ratio = (targetTemp - t1) / (t2 - t1);
           return i + ratio; // di antara i dan i+1
         }
       }
@@ -146,10 +164,9 @@
     // Suhu pada menit pecahan: interpolasi atau hold-last
     function getTempAtMinuteExact(temps, minuteExact) {
       if (!Number.isFinite(minuteExact)) return null;
-      if (minuteExact < 0 || minuteExact > 20) return null; // NOTE: izinkan 0 untuk Charge
+      if (minuteExact < 0 || minuteExact > 20) return null; // NOTE: izinkan 0 (Charge)
 
       if (Number.isInteger(minuteExact)) {
-        // menit 0 tidak ada di array temps, handle khusus di pemanggil
         if (minuteExact === 0) return null;
         const t = temps[minuteExact - 1];
         return t != null ? t : null;
@@ -247,12 +264,18 @@
         ctx.fillText(`${t}°C`, 10, y + 4);
       }
 
-      // --- Data ---
+      // --- Data suhu 1..20 ---
       const temps = new Array(20).fill(null);
       for (let i = 1; i <= 20; i++) {
         const val = parseFloat(document.getElementById(`minute${i}`).value);
         temps[i - 1] = Number.isFinite(val) ? val : null;
       }
+
+      // --- Data meta & event ---
+      const roastMaster      = (document.getElementById("roastMaster").value || "").trim();
+      const roasterMachine   = (document.getElementById("roasterMachine").value || "").trim();
+      const coffeeName       = (document.getElementById("coffeeName").value || "").trim();
+      const moistureContent  = parseFloat(document.getElementById("moistureContent").value);
 
       const initialTemp      = parseFloat(document.getElementById("initialTemp").value);
       const turningPointTemp = parseFloat(document.getElementById("turningPointTemp").value);
@@ -273,7 +296,7 @@
         return;
       }
 
-      // --- BARU: Garis sambungan dari Suhu Awal (menit 0) ke menit 1 (jika ada datanya) ---
+      // --- Garis dari Suhu Awal (menit 0) ke menit 1 (jika ada) + marker Charge ---
       if (Number.isFinite(initialTemp) && temps[0] != null) {
         const x0 = mapMinuteToX(0), y0 = mapTempToY(initialTemp);
         const x1 = mapMinuteToX(1), y1 = mapTempToY(temps[0]);
@@ -283,11 +306,8 @@
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
         ctx.stroke();
-
-        // Marker "Charge" di menit 0
         drawMarkerExact(0, initialTemp, "#0ea5e9", "Charge");
       } else if (Number.isFinite(initialTemp)) {
-        // Tampilkan marker "Charge" di menit 0 walau menit 1 tidak ada data
         drawMarkerExact(0, initialTemp, "#0ea5e9", "Charge");
       }
 
@@ -324,7 +344,7 @@
       }
       function drawMarkerExact(minuteExact, tempVal, color, label) {
         if (!Number.isFinite(minuteExact) || !Number.isFinite(tempVal)) return;
-        if (minuteExact < 0 || minuteExact > 20) return; // NOTE: izinkan 0 (Charge)
+        if (minuteExact < 0 || minuteExact > 20) return; // izinkan 0 (Charge)
         const x = mapMinuteToX(minuteExact);
         const y = mapTempToY(tempVal);
         ctx.fillStyle = color;
@@ -388,17 +408,27 @@
         drawMarkerExact(dropTime, dropTempUsed, "blue", dropLabel);
       }
 
-      // --- Info box kiri atas: tambah Suhu Awal + TP/FC/SC/Drop Time/Suhu Akhir Drop ---
-      const chargeLabel = Number.isFinite(initialTemp)   ? `${Math.round(initialTemp)}°C`        : "—";
-      const tpLabel     = Number.isFinite(turningPointTemp) ? `${Math.round(turningPointTemp)}°C` : "—";
-      const fcLabel     = Number.isFinite(firstCrackTemp)   ? `${Math.round(firstCrackTemp)}°C`   : "—";
-      const scLabel     = Number.isFinite(secondCrackTemp)  ? `${Math.round(secondCrackTemp)}°C`  : "—";
-      const dtLabel     = Number.isFinite(dropTime)         ? `${formatMinToMinSec(dropTime)}`    : "—";
+      // --- Info box kiri atas: tambahkan meta baru + data roasting utama ---
+      const roastMasterLabel    = roastMaster || "—";
+      const roasterMachineLabel = roasterMachine || "—";
+      const coffeeNameLabel     = coffeeName || "—";
+      const moistureLabel       = Number.isFinite(moistureContent) ? `${moistureContent.toFixed(1)}%` : "—";
+
+      const chargeLabel = Number.isFinite(initialTemp)      ? `${Math.round(initialTemp)}°C`        : "—";
+      const tpLabel     = Number.isFinite(turningPointTemp) ? `${Math.round(turningPointTemp)}°C`   : "—";
+      const fcLabel     = Number.isFinite(firstCrackTemp)   ? `${Math.round(firstCrackTemp)}°C`     : "—";
+      const scLabel     = Number.isFinite(secondCrackTemp)  ? `${Math.round(secondCrackTemp)}°C`    : "—";
+      const dtLabel     = Number.isFinite(dropTime)         ? `${formatMinToMinSec(dropTime)}`      : "—";
       let dropTLabel    = "—";
       if (dropTempUsed != null) {
         dropTLabel = `${dropTempIsApprox ? "≈ " : ""}${Math.round(dropTempUsed)}°C`;
       }
+
       drawInfoBoxTopLeft(ctx, 60, 20, [
+        `Roast Master: ${roastMasterLabel}`,
+        `Roaster Machine: ${roasterMachineLabel}`,
+        `Coffee: ${coffeeNameLabel}`,
+        `Moisture: ${moistureLabel}`,
         `Suhu Awal (Charge): ${chargeLabel}`,
         `Turning Point: ${tpLabel}`,
         `First Crack: ${fcLabel}`,
