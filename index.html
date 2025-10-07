@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (DevRatio, tanpa RoR)</title>
+  <title>Fajri Roast Log V.1.1 (DevRatio + Charge Temp)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -61,11 +61,16 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1 (DevRatio, tanpa RoR)</h1>
+  <h1>Fajri Roast Log V.1.1 (DevRatio + Charge Temp)</h1>
 
   <form id="roastForm">
     <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
     <div class="temperature-inputs" id="tempInputs"></div>
+
+    <!-- BARU: Suhu Awal (Charge) -->
+    <label>Suhu Awal (saat memasukkan biji ke drum):
+      <input type="number" id="initialTemp" min="80" max="250" step="1" placeholder="mis. 200">
+    </label>
 
     <label>Suhu Turning Point:
       <input type="number" id="turningPointTemp" min="80" max="250" placeholder="mis. 100">
@@ -122,7 +127,7 @@
       return closestMinute;
     }
 
-    // Cari menit pecahan (desimal) saat kurva melintasi targetTemp (interpolasi linear)
+    // Cari menit pecahan saat kurva melintasi targetTemp (interpolasi linear)
     function findCrossingMinute(temps, targetTemp, lastMinute) {
       if (!Number.isFinite(targetTemp)) return null;
       const upper = Math.max(2, lastMinute);
@@ -132,19 +137,20 @@
         const minT = Math.min(t1, t2), maxT = Math.max(t1, t2);
         if (targetTemp >= minT && targetTemp <= maxT && t2 !== t1) {
           const ratio = (targetTemp - t1) / (t2 - t1); // 0..1
-          return i + ratio; // menit pecahan antara i dan i+1
+          return i + ratio; // di antara i dan i+1
         }
       }
       return null;
     }
 
-    // Temperatur pada menit pecahan: interpolasi antara titik valid terdekat.
-    // Jika hanya sisi kiri yang ada (kurva berhenti), pakai suhu terakhir agar marker tetap tampil.
+    // Suhu pada menit pecahan: interpolasi atau hold-last
     function getTempAtMinuteExact(temps, minuteExact) {
       if (!Number.isFinite(minuteExact)) return null;
-      if (minuteExact < 1 || minuteExact > 20) return null;
+      if (minuteExact < 0 || minuteExact > 20) return null; // NOTE: izinkan 0 untuk Charge
 
       if (Number.isInteger(minuteExact)) {
+        // menit 0 tidak ada di array temps, handle khusus di pemanggil
+        if (minuteExact === 0) return null;
         const t = temps[minuteExact - 1];
         return t != null ? t : null;
       }
@@ -152,14 +158,14 @@
       const floorM = Math.floor(minuteExact);
       const ceilM  = Math.ceil(minuteExact);
 
-      // prev known <= minuteExact
+      // prev known <= minuteExact (min 1)
       let prev = null;
-      for (let m = floorM; m >= 1; m--) {
+      for (let m = Math.max(1, floorM); m >= 1; m--) {
         if (temps[m - 1] != null) { prev = m; break; }
       }
       // next known >= minuteExact
       let next = null;
-      for (let m = ceilM; m <= 20; m++) {
+      for (let m = Math.max(1, ceilM); m <= 20; m++) {
         if (temps[m - 1] != null) { next = m; break; }
       }
 
@@ -168,7 +174,6 @@
         const ratio = (minuteExact - prev) / (next - prev);
         return tPrev + (tNext - tPrev) * ratio;
       } else if (prev != null) {
-        // hold-last-value bila tidak ada titik setelahnya
         return temps[prev - 1];
       } else if (next != null) {
         return temps[next - 1];
@@ -208,7 +213,7 @@
       return 550 - (temp - 80) * 2;
     }
     function mapMinuteToX(minuteExact) {
-      return 50 + minuteExact * 45;
+      return 50 + minuteExact * 45; // menit 0 berada di sumbu Y (x=50)
     }
 
     // ====== Main draw ======
@@ -249,6 +254,7 @@
         temps[i - 1] = Number.isFinite(val) ? val : null;
       }
 
+      const initialTemp      = parseFloat(document.getElementById("initialTemp").value);
       const turningPointTemp = parseFloat(document.getElementById("turningPointTemp").value);
       const firstCrackTemp   = parseFloat(document.getElementById("firstCrackTemp").value);
       const secondCrackTemp  = parseFloat(document.getElementById("secondCrackTemp").value);
@@ -265,6 +271,24 @@
         ctx.font = "bold 14px Arial";
         ctx.fillText("Masukkan data suhu untuk menampilkan kurva.", 60, 30);
         return;
+      }
+
+      // --- BARU: Garis sambungan dari Suhu Awal (menit 0) ke menit 1 (jika ada datanya) ---
+      if (Number.isFinite(initialTemp) && temps[0] != null) {
+        const x0 = mapMinuteToX(0), y0 = mapTempToY(initialTemp);
+        const x1 = mapMinuteToX(1), y1 = mapTempToY(temps[0]);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Marker "Charge" di menit 0
+        drawMarkerExact(0, initialTemp, "#0ea5e9", "Charge");
+      } else if (Number.isFinite(initialTemp)) {
+        // Tampilkan marker "Charge" di menit 0 walau menit 1 tidak ada data
+        drawMarkerExact(0, initialTemp, "#0ea5e9", "Charge");
       }
 
       // --- Kurva suhu (putus jika gap, stop di lastMinute) ---
@@ -300,7 +324,7 @@
       }
       function drawMarkerExact(minuteExact, tempVal, color, label) {
         if (!Number.isFinite(minuteExact) || !Number.isFinite(tempVal)) return;
-        if (minuteExact < 1 || minuteExact > 20) return;
+        if (minuteExact < 0 || minuteExact > 20) return; // NOTE: izinkan 0 (Charge)
         const x = mapMinuteToX(minuteExact);
         const y = mapTempToY(tempVal);
         ctx.fillStyle = color;
@@ -364,16 +388,18 @@
         drawMarkerExact(dropTime, dropTempUsed, "blue", dropLabel);
       }
 
-      // --- Info box kiri atas: TP/FC/SC/Drop Time/Suhu Akhir Drop ---
-      const tpLabel  = Number.isFinite(turningPointTemp) ? `${Math.round(turningPointTemp)}°C` : "—";
-      const fcLabel  = Number.isFinite(firstCrackTemp)   ? `${Math.round(firstCrackTemp)}°C`   : "—";
-      const scLabel  = Number.isFinite(secondCrackTemp)  ? `${Math.round(secondCrackTemp)}°C`  : "—";
-      const dtLabel  = Number.isFinite(dropTime)         ? `${formatMinToMinSec(dropTime)}`    : "—";
-      let dropTLabel = "—";
+      // --- Info box kiri atas: tambah Suhu Awal + TP/FC/SC/Drop Time/Suhu Akhir Drop ---
+      const chargeLabel = Number.isFinite(initialTemp)   ? `${Math.round(initialTemp)}°C`        : "—";
+      const tpLabel     = Number.isFinite(turningPointTemp) ? `${Math.round(turningPointTemp)}°C` : "—";
+      const fcLabel     = Number.isFinite(firstCrackTemp)   ? `${Math.round(firstCrackTemp)}°C`   : "—";
+      const scLabel     = Number.isFinite(secondCrackTemp)  ? `${Math.round(secondCrackTemp)}°C`  : "—";
+      const dtLabel     = Number.isFinite(dropTime)         ? `${formatMinToMinSec(dropTime)}`    : "—";
+      let dropTLabel    = "—";
       if (dropTempUsed != null) {
         dropTLabel = `${dropTempIsApprox ? "≈ " : ""}${Math.round(dropTempUsed)}°C`;
       }
       drawInfoBoxTopLeft(ctx, 60, 20, [
+        `Suhu Awal (Charge): ${chargeLabel}`,
         `Turning Point: ${tpLabel}`,
         `First Crack: ${fcLabel}`,
         `Second Crack: ${scLabel}`,
