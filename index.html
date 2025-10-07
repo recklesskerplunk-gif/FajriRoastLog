@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (Fix)</title>
+  <title>Fajri Roast Log V.1.1 (Fix + Second Crack)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -63,7 +63,7 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1 (Fix)</h1>
+  <h1>Fajri Roast Log V.1.1 (Fix + Second Crack)</h1>
 
   <form id="roastForm">
     <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
@@ -74,6 +74,10 @@
     </label>
     <label>Suhu First Crack:
       <input type="number" id="firstCrackTemp" min="80" max="250" placeholder="mis. 196">
+    </label>
+    <!-- Tambahan: Suhu Second Crack (opsional) -->
+    <label>Suhu Second Crack (opsional):
+      <input type="number" id="secondCrackTemp" min="80" max="250" placeholder="mis. 210">
     </label>
     <label>Drop Time Minute:
       <input type="number" id="dropTime" min="1" max="20" placeholder="mis. 13">
@@ -159,11 +163,13 @@
       }
 
       const turningPointTemp = parseFloat(document.getElementById("turningPointTemp").value);
-      const firstCrackTemp = parseFloat(document.getElementById("firstCrackTemp").value);
-      const dropTime = parseInt(document.getElementById("dropTime").value);
+      const firstCrackTemp  = parseFloat(document.getElementById("firstCrackTemp").value);
+      const secondCrackTemp = parseFloat(document.getElementById("secondCrackTemp").value); // NEW
+      const dropTime        = parseInt(document.getElementById("dropTime").value);
 
       const turningPoint = findClosestMinute(temps, turningPointTemp);
-      const firstCrack = findClosestMinute(temps, firstCrackTemp);
+      const firstCrack   = findClosestMinute(temps, firstCrackTemp);
+      const secondCrack  = findClosestMinute(temps, secondCrackTemp); // NEW
 
       // Tentukan menit terakhir yang memiliki data (kurva berhenti di sini)
       let lastMinute = -1;
@@ -173,7 +179,6 @@
 
       // Jika tidak ada data sama sekali, selesai (hanya grid)
       if (lastMinute === -1) {
-        // tidak menggambar kurva
         return;
       }
 
@@ -223,8 +228,10 @@
       }
 
       // Gambar marker sesuai menit (jika ditemukan & ada suhu di menit itu)
-      if (turningPoint >= 1) drawMarker(turningPoint, "red", "Turning Point");
-      if (firstCrack >= 1) drawMarker(firstCrack, "orange", "First Crack");
+      if (turningPoint >= 1) drawMarker(turningPoint, "red",    "Turning Point");
+      if (firstCrack   >= 1) drawMarker(firstCrack,   "orange", "First Crack");
+      // NEW: marker second crack (opsional)
+      if (secondCrack  >= 1) drawMarker(secondCrack,  "green",  "Second Crack");
       if (Number.isFinite(dropTime)) drawMarker(dropTime, "blue", "Drop Time");
     }
 
@@ -237,3 +244,4 @@
     }
   </script>
 </body>
+</html>
