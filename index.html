@@ -260,14 +260,19 @@ label, input, select, textarea {
     <section id="stopwatch" class="timer-card hidden" aria-live="polite" aria-atomic="true">
       <div id="timeDisplay" class="time" aria-label="Waktu berjalan">00:00:00.00</div>
       <div class="controls">
-        
+        <button id="pauseBtn" class="btn-pause" aria-pressed="false" title="Jeda atau lanjutkan stopwatch">
+          ⏸️ Pause
+        </button>
+      </div>
+      <div class="hints">Tips: tekan <kbd>Space</kbd> untuk jeda/lanjut.</div>
     </section>
   </main>
 
   <script>
     // Elemen
     const startBtn = document.getElementById('startBtn');
-        const stopwatch = document.getElementById('stopwatch');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stopwatch = document.getElementById('stopwatch');
     const timeDisplay = document.getElementById('timeDisplay');
 
     // State waktu (dalam ms)
@@ -278,16 +283,12 @@ label, input, select, textarea {
 
     // Format: HH:MM:SS.CS (CS = centiseconds / 1/100 detik)
     function formatTime(ms) {
-      const cs = Math.floor((ms % 1000) / 10);
-      const totalSeconds = Math.floor(ms / 1000);
-      const s = totalSeconds % 60;
-      const totalMinutes = Math.floor(totalSeconds / 60);
-      const m = totalMinutes % 60;
-      const h = Math.floor(totalMinutes / 60);
-
-      const pad2 = (n) => n.toString().padStart(2, '0');
-      return `${pad2(h)}:${pad2(m)}:${pad2(s)}.${pad2(cs)}`;
-    }
+    const totalSeconds = Math.floor(ms / 1000);
+    const s = totalSeconds % 60;
+    const m = Math.floor(totalSeconds / 60);
+    const pad2 = (n) => n.toString().padStart(2, '0');
+    return `${pad2(m)}:${pad2(s)}`;
+}
 
     function update() {
       const now = performance.now();
@@ -330,7 +331,8 @@ label, input, select, textarea {
 
     // Event handlers
     startBtn.addEventListener('click', start);
-    
+    pauseBtn.addEventListener('click', pauseOrResume);
+
     // Akses cepat via keyboard: Space untuk jeda/lanjut jika stopwatch sudah tampil
     window.addEventListener('keydown', (e) => {
       // Abaikan jika sedang mengetik di input
