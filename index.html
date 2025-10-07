@@ -85,6 +85,270 @@
       </label>
     </div>
 
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Start Roasting Stopwatch</title>
+  <style>
+    :root{
+      --bg: #0f1521;
+      --card: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #00d884;
+      --accent-2: #38bdf8;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans",
+                   "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% 10%, #121a2a 0%, var(--bg) 45%, #0b101a 100%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 32px 16px;
+    }
+
+    .app {
+      width: min(96vw, 860px);
+      display: grid;
+      gap: 20px;
+      justify-items: center;
+    }
+
+    h1 {
+      margin: 0 0 6px 0;
+      font-weight: 700;
+      letter-spacing: .2px;
+      text-align: center;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: .95rem;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 6px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0b141a;
+      cursor: pointer;
+      transition: transform .06s ease, box-shadow .2s ease, background-color .2s ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.07);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    button:active { transform: translateY(1px) scale(0.995); }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #00e699, #00c27d);
+      color: #062a1f;
+    }
+    .btn-primary:disabled {
+      background: linear-gradient(180deg, #8feccc, #7edbbf);
+      color: #285c4d;
+      cursor: not-allowed;
+      opacity: .85;
+    }
+
+    .btn-pause {
+      background: linear-gradient(180deg, #60a5fa, #3b82f6);
+      color: #071a33;
+    }
+    .btn-pause[aria-pressed="true"] {
+      /* mode Lanjutkan */
+      background: linear-gradient(180deg, #fb923c, #f97316);
+      color: #2d1505;
+    }
+
+    /* KOTAK STOPWATCH */
+    .timer-card {
+      width: 100%;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00)) , var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: clamp(20px, 5vw, 36px);
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .timer-card::after {
+      content: "";
+      position: absolute;
+      inset: -40% -20% auto auto;
+      width: 60%;
+      height: 160%;
+      background: radial-gradient(closest-side, rgba(0,216,132,.10), transparent 60%);
+      transform: rotate(18deg);
+      pointer-events: none;
+    }
+
+    .time {
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      letter-spacing: .5px;
+      /* Ukuran besar responsif */
+      font-size: clamp(40px, 10vw, 110px);
+      font-weight: 800;
+      color: #f8fafc;
+      text-shadow: 0 1px 0 rgba(255,255,255,.05), 0 10px 24px rgba(0,0,0,.35);
+      padding: clamp(14px, 2.5vw, 20px) clamp(18px, 3vw, 28px);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(56,189,248,.12), rgba(0,216,132,.12));
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .hints {
+      color: var(--muted);
+      font-size: .9rem;
+      text-align: center;
+    }
+
+    /* Sembunyikan stopwatch sebelum start */
+    .hidden { display: none; }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f4f6fb;
+        --card: #ffffff;
+        --text: #0b0f16;
+        --muted: #556070;
+      }
+      body { background: radial-gradient(1200px 800px at 20% 10%, #ffffff 0%, #f4f7fb 45%, #eaf0ff 100%); }
+      .time { color: #0b0f16; text-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" role="application" aria-label="Aplikasi Stopwatch Roasting">
+    <h1>Start Roasting Stopwatch</h1>
+    <p class="sub">Tekan <strong>Start Roasting</strong> untuk menampilkan stopwatch. Waktu akan terus berjalan sampai Anda menekan <strong>Pause</strong>. Menekan lagi akan <strong>lanjut</strong> dari waktu terakhir.</p>
+
+    <div class="controls">
+      <button id="startBtn" class="btn-primary" aria-controls="stopwatch" title="Mulai roasting sekarang">
+        🔥 Start Roasting
+      </button>
+      <!-- Tombol pause/resume akan tampil bersama stopwatch -->
+    </div>
+
+    <section id="stopwatch" class="timer-card hidden" aria-live="polite" aria-atomic="true">
+      <div id="timeDisplay" class="time" aria-label="Waktu berjalan">00:00:00.00</div>
+      <div class="controls">
+        <button id="pauseBtn" class="btn-pause" aria-pressed="false" title="Jeda atau lanjutkan stopwatch">
+          ⏸️ Pause
+        </button>
+      </div>
+      <div class="hints">Tips: tekan <kbd>Space</kbd> untuk jeda/lanjut.</div>
+    </section>
+  </main>
+
+  <script>
+    // Elemen
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stopwatch = document.getElementById('stopwatch');
+    const timeDisplay = document.getElementById('timeDisplay');
+
+    // State waktu (dalam ms)
+    let running = false;     // apakah sedang berjalan
+    let startStamp = 0;      // waktu mulai (performance.now) saat terakhir start/resume
+    let elapsed = 0;         // akumulasi waktu yang sudah berlalu saat dijeda
+    let rafId = null;        // id requestAnimationFrame
+
+    // Format: HH:MM:SS.CS (CS = centiseconds / 1/100 detik)
+    function formatTime(ms) {
+      const cs = Math.floor((ms % 1000) / 10);
+      const totalSeconds = Math.floor(ms / 1000);
+      const s = totalSeconds % 60;
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const m = totalMinutes % 60;
+      const h = Math.floor(totalMinutes / 60);
+
+      const pad2 = (n) => n.toString().padStart(2, '0');
+      return `${pad2(h)}:${pad2(m)}:${pad2(s)}.${pad2(cs)}`;
+    }
+
+    function update() {
+      const now = performance.now();
+      const total = elapsed + (now - startStamp);
+      timeDisplay.textContent = formatTime(total);
+      rafId = requestAnimationFrame(update);
+    }
+
+    function start() {
+      if (running) return;
+      // Tampilkan kotak stopwatch, disable tombol start
+      stopwatch.classList.remove('hidden');
+      startBtn.disabled = true;
+      startBtn.textContent = '🔥 Running…';
+      // Mulai
+      running = true;
+      startStamp = performance.now();
+      rafId = requestAnimationFrame(update);
+    }
+
+    function pauseOrResume() {
+      if (running) {
+        // PAUSE
+        running = false;
+        cancelAnimationFrame(rafId);
+        const now = performance.now();
+        elapsed += (now - startStamp);   // simpan akumulasi
+        // Ubah tombol ke "Lanjutkan"
+        pauseBtn.textContent = '▶️ Lanjutkan';
+        pauseBtn.setAttribute('aria-pressed', 'true');
+      } else {
+        // RESUME
+        running = true;
+        startStamp = performance.now();
+        pauseBtn.textContent = '⏸️ Pause';
+        pauseBtn.setAttribute('aria-pressed', 'false');
+        rafId = requestAnimationFrame(update);
+      }
+    }
+
+    // Event handlers
+    startBtn.addEventListener('click', start);
+    pauseBtn.addEventListener('click', pauseOrResume);
+
+    // Akses cepat via keyboard: Space untuk jeda/lanjut jika stopwatch sudah tampil
+    window.addEventListener('keydown', (e) => {
+      // Abaikan jika sedang mengetik di input
+      if (['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (stopwatch && !stopwatch.classList.contains('hidden')) {
+          pauseOrResume();
+        }
+      }
+    });
+
+    // Opsional: cegah jam "melompat" jika tab di-background terlalu lama.
+    // (Dengan performance.now + rAF, drift tetap minim dan halus untuk UI.)
+  </script>
+</body>
+
     <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
     <div class="temperature-inputs" id="tempInputs"></div>
 
