@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fajri Roast Log V.1.1 (Meta Top-Center)</title>
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fajri Roast Log V.1.1 (Meta Top-Center)</title>
+<style>
     body {
       font-family: Arial, sans-serif;
       margin: 10px;
@@ -66,57 +67,50 @@
   </style>
 </head>
 <body>
-  <h1>Fajri Roast Log V.1.1</h1>
-
-  <form id="roastForm">
-    <!-- META (tetap di form, ditampilkan di atas-tengah grafik) -->
-    <div class="meta-inputs">
-      <label>Roast Master:
-        <input type="text" id="roastMaster" placeholder="Nama operator (mis. Fajari)">
-      </label>
-      <label>Roaster Machine:
-        <input type="text" id="roasterMachine" placeholder="Merek/Model mesin (mis. Huky 500)">
-      </label>
-      <label>Coffee:
-        <input type="text" id="coffeeName" placeholder="Origin/Varietas (mis. Gayo Natural)">
-      </label>
-      <label>Moisture Content (%):
-        <input type="number" id="moistureContent" min="0" max="30" step="0.1" placeholder="mis. 11.5">
-      </label>
-    </div>
-
-    <label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
-    <div class="temperature-inputs" id="tempInputs"></div>
-
-    <!-- Suhu Awal (Charge) -->
-    <label>Suhu Awal (saat memasukkan biji ke drum):
-      <input type="number" id="initialTemp" min="80" max="250" step="1" placeholder="mis. 200">
-    </label>
-
-    <label>Suhu Turning Point:
-      <input type="number" id="turningPointTemp" min="80" max="250" placeholder="mis. 100">
-    </label>
-    <label>Suhu First Crack:
-      <input type="number" id="firstCrackTemp" min="80" max="250" placeholder="mis. 196">
-    </label>
-    <label>Suhu Second Crack (opsional):
-      <input type="number" id="secondCrackTemp" min="80" max="250" placeholder="mis. 210">
-    </label>
-    <label>Drop Time (menit, boleh desimal):
-      <input type="number" id="dropTime" min="1" max="20" step="0.1" placeholder="mis. 13.5 = 13m30s">
-    </label>
-    <label>Suhu Akhir Drop (opsional):
-      <input type="number" id="dropFinalTemp" min="80" max="250" step="1" placeholder="mis. 205">
-    </label>
-
-    <div class="button-group">
-      <button type="button" onclick="generateChart()">End Of Roast</button>
-    </div>
-  </form>
-
-  <canvas id="roastChart" width="1000" height="600"></canvas>
-
-  <script>
+<h1>Fajri Roast Log V.1.1</h1>
+<form id="roastForm">
+<!-- META (tetap di form, ditampilkan di atas-tengah grafik) -->
+<div class="meta-inputs">
+<label>Roast Master:
+        <input id="roastMaster" placeholder="Nama operator (mis. Fajari)" type="text"/>
+</label>
+<label>Roaster Machine:
+        <input id="roasterMachine" placeholder="Merek/Model mesin (mis. Huky 500)" type="text"/>
+</label>
+<label>Coffee:
+        <input id="coffeeName" placeholder="Origin/Varietas (mis. Gayo Natural)" type="text"/>
+</label>
+<label>Moisture Content (%):
+        <input id="moistureContent" max="30" min="0" placeholder="mis. 11.5" step="0.1" type="number"/>
+</label>
+</div>
+<label><strong>Input Suhu per Menit (80°C–250°C)</strong></label>
+<div class="temperature-inputs" id="tempInputs"></div>
+<!-- Suhu Awal (Charge) -->
+<label>Suhu Awal (saat memasukkan biji ke drum):
+      <input id="initialTemp" max="250" min="80" placeholder="mis. 200" step="1" type="number"/>
+</label>
+<label>Suhu Turning Point:
+      <input id="turningPointTemp" max="250" min="80" placeholder="mis. 100" type="number"/>
+</label>
+<label>Suhu First Crack:
+      <input id="firstCrackTemp" max="250" min="80" placeholder="mis. 196" type="number"/>
+</label>
+<label>Suhu Second Crack (opsional):
+      <input id="secondCrackTemp" max="250" min="80" placeholder="mis. 210" type="number"/>
+</label>
+<label>Drop Time (menit, boleh desimal):
+      <input id="dropTime" max="20" min="1" placeholder="mis. 13.5 = 13m30s" step="0.1" type="number"/>
+</label>
+<label>Suhu Akhir Drop (opsional):
+      <input id="dropFinalTemp" max="250" min="80" placeholder="mis. 205" step="1" type="number"/>
+</label>
+<div class="button-group">
+<button onclick="generateChart()" type="button">End Of Roast</button>
+</div>
+</form>
+<canvas height="600" id="roastChart" width="1000"></canvas>
+<script>
     // ====== Input fields 1..20 minutes ======
     const tempContainer = document.getElementById("tempInputs");
     for (let i = 1; i <= 20; i++) {
@@ -485,5 +479,34 @@
       link.click();
     }
   </script>
+
+<!-- Tombol dan Stopwatch -->
+<button onclick="startRoasting()">Start Roasting</button>
+<button onclick="resetStopwatch()">Reset</button>
+<div id="stopwatch">00:00</div>
+<!-- Input Suhu per Menit -->
+<label for="suhu">Input Suhu per Menit (80°C–250°C):</label>
+<input id="suhu" max="250" min="80" name="suhu" type="number"/>
+<script>
+  let stopwatchInterval;
+  let seconds = 0;
+
+  function startRoasting() {
+    clearInterval(stopwatchInterval);
+    stopwatchInterval = setInterval(() => {
+      seconds++;
+      const minutes = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      document.getElementById("stopwatch").textContent =
+        `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }, 1000);
+  }
+
+  function resetStopwatch() {
+    clearInterval(stopwatchInterval);
+    seconds = 0;
+    document.getElementById("stopwatch").textContent = "00:00";
+  }
+</script>
 </body>
 </html>
